@@ -10,6 +10,24 @@
   <div class="container">
     <h1>Website Blocker</h1>
 
+    <div class="workspace-section">
+      <div class="workspace-header">
+        <label>Current Workspace:</label>
+        <button id="manageWorkspacesBtn" class="manage-btn">Manage</button>
+      </div>
+      <select id="workspaceSelect"></select>
+      <div id="workspaceManager" class="workspace-manager hidden">
+        <div class="workspace-form">
+          <input type="text" id="newWorkspaceName" placeholder="New workspace name" />
+          <button id="createWorkspaceBtn">Create</button>
+        </div>
+        <div class="workspace-list">
+          <h3>All Workspaces</h3>
+          <ul id="workspaceList"></ul>
+        </div>
+      </div>
+    </div>
+
     <div class="block-mode">
       <label>Block Mode:</label>
       <select id="blockMode">
