@@ -1,24 +1,43 @@
-// DOM elements
-const siteInput = document.getElementById('siteInput');
-const addButton = document.getElementById('addButton');
-const blacklistElement = document.getElementById('blacklist');
-const emptyMessage = document.getElementById('emptyMessage');
-const blockModeSelect = document.getElementById('blockMode');
-const workspaceSelect = document.getElementById('workspaceSelect');
-const manageWorkspacesBtn = document.getElementById('manageWorkspacesBtn');
-const workspaceManager = document.getElementById('workspaceManager');
-const newWorkspaceName = document.getElementById('newWorkspaceName');
-const createWorkspaceBtn = document.getElementById('createWorkspaceBtn');
-const workspaceList = document.getElementById('workspaceList');
+// DOM elements - will be initialized after DOM loads
+let siteInput;
+let addButton;
+let blacklistElement;
+let emptyMessage;
+let blockModeSelect;
+let workspaceSelect;
+let manageWorkspacesBtn;
+let workspaceManager;
+let newWorkspaceName;
+let createWorkspaceBtn;
+let workspaceList;
 
 let currentWindowId = null;
 let currentWorkspaceId = null;
 
 // Load everything when popup opens
 document.addEventListener('DOMContentLoaded', async () => {
+  // Initialize DOM elements
+  siteInput = document.getElementById('siteInput');
+  addButton = document.getElementById('addButton');
+  blacklistElement = document.getElementById('blacklist');
+  emptyMessage = document.getElementById('emptyMessage');
+  blockModeSelect = document.getElementById('blockMode');
+  workspaceSelect = document.getElementById('workspaceSelect');
+  manageWorkspacesBtn = document.getElementById('manageWorkspacesBtn');
+  workspaceManager = document.getElementById('workspaceManager');
+  newWorkspaceName = document.getElementById('newWorkspaceName');
+  createWorkspaceBtn = document.getElementById('createWorkspaceBtn');
+  workspaceList = document.getElementById('workspaceList');
+
+  // Set up event listeners
+  setupEventListeners();
+
   // Get current window ID
   const [currentWindow] = await chrome.windows.getCurrent();
   currentWindowId = currentWindow.id;
+
+  // Ensure default workspace exists
+  await ensureDefaultWorkspace();
 
   await loadWorkspaces();
   await loadCurrentWorkspace();
@@ -26,141 +45,161 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadBlockMode();
 });
 
-// Toggle workspace manager
-manageWorkspacesBtn.addEventListener('click', () => {
-  workspaceManager.classList.toggle('hidden');
-  if (!workspaceManager.classList.contains('hidden')) {
-    loadAllWorkspaces();
-  }
-});
-
-// Create new workspace
-createWorkspaceBtn.addEventListener('click', async () => {
-  const name = newWorkspaceName.value.trim();
-
-  if (!name) {
-    alert('Please enter a workspace name');
-    return;
-  }
-
-  const result = await chrome.storage.sync.get(['workspaces']);
-  const workspaces = result.workspaces || {};
-
-  // Generate unique ID
-  const id = 'workspace_' + Date.now();
+// Setup all event listeners
+function setupEventListeners() {
+  // Toggle workspace manager
+  manageWorkspacesBtn.addEventListener('click', () => {
+    workspaceManager.classList.toggle('hidden');
+    if (!workspaceManager.classList.contains('hidden')) {
+      loadAllWorkspaces();
+    }
+  });
 
   // Create new workspace
-  workspaces[id] = {
-    id: id,
-    name: name,
-    blacklist: [],
-    blockMode: 'close'
-  };
+  createWorkspaceBtn.addEventListener('click', async () => {
+    const name = newWorkspaceName.value.trim();
 
-  await chrome.storage.sync.set({ workspaces });
+    if (!name) {
+      alert('Please enter a workspace name');
+      return;
+    }
 
-  // Clear input
-  newWorkspaceName.value = '';
+    const result = await chrome.storage.sync.get(['workspaces']);
+    const workspaces = result.workspaces || {};
 
-  // Reload
-  await loadWorkspaces();
-  await loadAllWorkspaces();
-});
+    // Generate unique ID
+    const id = 'workspace_' + Date.now();
 
-// Allow creating workspace by pressing Enter
-newWorkspaceName.addEventListener('keypress', (e) => {
-  if (e.key === 'Enter') {
-    createWorkspaceBtn.click();
-  }
-});
+    // Create new workspace
+    workspaces[id] = {
+      id: id,
+      name: name,
+      blacklist: [],
+      blockMode: 'close'
+    };
 
-// Handle workspace selection change
-workspaceSelect.addEventListener('change', async () => {
-  const workspaceId = workspaceSelect.value;
+    await chrome.storage.sync.set({ workspaces });
 
-  // Update window-workspace mapping
-  const result = await chrome.storage.sync.get(['windowWorkspaces']);
-  const windowWorkspaces = result.windowWorkspaces || {};
-  windowWorkspaces[currentWindowId] = workspaceId;
+    // Clear input
+    newWorkspaceName.value = '';
 
-  await chrome.storage.sync.set({ windowWorkspaces });
+    // Reload
+    await loadWorkspaces();
+    await loadAllWorkspaces();
+  });
 
-  currentWorkspaceId = workspaceId;
-  await loadBlacklist();
-  await loadBlockMode();
-});
+  // Allow creating workspace by pressing Enter
+  newWorkspaceName.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      createWorkspaceBtn.click();
+    }
+  });
 
-// Add site to blacklist
-addButton.addEventListener('click', async () => {
-  const site = siteInput.value.trim().toLowerCase();
+  // Handle workspace selection change
+  workspaceSelect.addEventListener('change', async () => {
+    const workspaceId = workspaceSelect.value;
 
-  if (!site) {
-    alert('Please enter a website');
-    return;
-  }
+    // Update window-workspace mapping
+    const result = await chrome.storage.sync.get(['windowWorkspaces']);
+    const windowWorkspaces = result.windowWorkspaces || {};
+    windowWorkspaces[currentWindowId] = workspaceId;
 
-  // Remove protocol and path if provided
-  let cleanSite = site
-    .replace(/^https?:\/\//, '')
-    .replace(/^www\./, '')
-    .split('/')[0];
+    await chrome.storage.sync.set({ windowWorkspaces });
 
-  if (!cleanSite) {
-    alert('Please enter a valid website');
-    return;
-  }
+    currentWorkspaceId = workspaceId;
+    await loadBlacklist();
+    await loadBlockMode();
+  });
 
-  // Get current workspace
-  const result = await chrome.storage.sync.get(['workspaces']);
-  const workspaces = result.workspaces || {};
-  const workspace = workspaces[currentWorkspaceId];
+  // Add site to blacklist
+  addButton.addEventListener('click', async () => {
+    const site = siteInput.value.trim().toLowerCase();
 
-  if (!workspace) {
-    alert('No workspace selected');
-    return;
-  }
+    if (!site) {
+      alert('Please enter a website');
+      return;
+    }
 
-  const blacklist = workspace.blacklist || [];
+    // Remove protocol and path if provided
+    let cleanSite = site
+      .replace(/^https?:\/\//, '')
+      .replace(/^www\./, '')
+      .split('/')[0];
 
-  // Check if already exists
-  if (blacklist.includes(cleanSite)) {
-    alert('This website is already blocked in this workspace');
-    return;
-  }
+    if (!cleanSite) {
+      alert('Please enter a valid website');
+      return;
+    }
 
-  // Add to blacklist
-  blacklist.push(cleanSite);
-  workspace.blacklist = blacklist;
-  workspaces[currentWorkspaceId] = workspace;
+    // Get current workspace
+    const result = await chrome.storage.sync.get(['workspaces']);
+    const workspaces = result.workspaces || {};
+    const workspace = workspaces[currentWorkspaceId];
 
-  await chrome.storage.sync.set({ workspaces });
+    if (!workspace) {
+      alert('No workspace selected');
+      return;
+    }
 
-  // Clear input
-  siteInput.value = '';
+    const blacklist = workspace.blacklist || [];
 
-  // Reload list
-  await loadBlacklist();
-});
+    // Check if already exists
+    if (blacklist.includes(cleanSite)) {
+      alert('This website is already blocked in this workspace');
+      return;
+    }
 
-// Allow adding by pressing Enter
-siteInput.addEventListener('keypress', (e) => {
-  if (e.key === 'Enter') {
-    addButton.click();
-  }
-});
-
-// Handle block mode change
-blockModeSelect.addEventListener('change', async () => {
-  const result = await chrome.storage.sync.get(['workspaces']);
-  const workspaces = result.workspaces || {};
-  const workspace = workspaces[currentWorkspaceId];
-
-  if (workspace) {
-    workspace.blockMode = blockModeSelect.value;
+    // Add to blacklist
+    blacklist.push(cleanSite);
+    workspace.blacklist = blacklist;
     workspaces[currentWorkspaceId] = workspace;
+
+    await chrome.storage.sync.set({ workspaces });
+
+    // Clear input
+    siteInput.value = '';
+
+    // Reload list
+    await loadBlacklist();
+  });
+
+  // Allow adding by pressing Enter
+  siteInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+      addButton.click();
+    }
+  });
+
+  // Handle block mode change
+  blockModeSelect.addEventListener('change', async () => {
+    const result = await chrome.storage.sync.get(['workspaces']);
+    const workspaces = result.workspaces || {};
+    const workspace = workspaces[currentWorkspaceId];
+
+    if (workspace) {
+      workspace.blockMode = blockModeSelect.value;
+      workspaces[currentWorkspaceId] = workspace;
+      await chrome.storage.sync.set({ workspaces });
+    }
+  });
+}
+
+// Ensure default workspace exists in storage
+async function ensureDefaultWorkspace() {
+  const result = await chrome.storage.sync.get(['workspaces']);
+  let workspaces = result.workspaces || {};
+
+  // Create default workspace if it doesn't exist
+  if (!workspaces['default'] || Object.keys(workspaces).length === 0) {
+    workspaces['default'] = {
+      id: 'default',
+      name: 'Default Workspace',
+      blacklist: [],
+      blockMode: 'close'
+    };
     await chrome.storage.sync.set({ workspaces });
   }
-});
+}
 
 // Load workspaces into dropdown
 async function loadWorkspaces() {
@@ -173,8 +212,22 @@ async function loadWorkspaces() {
   // Get current workspace for this window
   currentWorkspaceId = windowWorkspaces[currentWindowId] || 'default';
 
+  // Check if we have any workspaces
+  const workspaceArray = Object.values(workspaces);
+
+  if (workspaceArray.length === 0) {
+    // This shouldn't happen because ensureDefaultWorkspace runs first,
+    // but just in case, create a default option
+    const option = document.createElement('option');
+    option.value = 'default';
+    option.textContent = 'Default Workspace';
+    option.selected = true;
+    workspaceSelect.appendChild(option);
+    return;
+  }
+
   // Populate dropdown
-  Object.values(workspaces).forEach(workspace => {
+  workspaceArray.forEach(workspace => {
     const option = document.createElement('option');
     option.value = workspace.id;
     option.textContent = workspace.name;
