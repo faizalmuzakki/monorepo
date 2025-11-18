@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Website Blocker</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Website Blocker</h1>
+
+    <div class="block-mode">
+      <label>Block Mode:</label>
+      <select id="blockMode">
+        <option value="close">Close Tab</option>
+        <option value="warn">Show Warning</option>
+      </select>
+    </div>
+
+    <div class="add-site">
+      <input type="text" id="siteInput" placeholder="e.g., youtube.com" />
+      <button id="addButton">Add Site</button>
+    </div>
+
+    <div class="blacklist-container">
+      <h2>Blocked Websites</h2>
+      <ul id="blacklist"></ul>
+      <p id="emptyMessage" class="empty-message">No websites blocked yet</p>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
