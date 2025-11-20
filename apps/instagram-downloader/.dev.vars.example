@@ -1,0 +1,9 @@
+# Environment variables for local development
+# Copy this file to .dev.vars and fill in your values
+
+# Optional: Instagram API credentials (if you want to use official API)
+# INSTAGRAM_ACCESS_TOKEN=your_token_here
+
+# Optional: Custom settings
+# MAX_CAPTION_LENGTH=200
+# CACHE_TTL=3600
