@@ -11,6 +11,24 @@ A unified repository containing all my personal projects. No more juggling multi
 
 ## Projects
 
+### 📝 [Markdown Notepad](./notepad-app)
+
+A clean, minimalist notepad application with full GitHub Flavored Markdown support. Inspired by notepad.pw but with powerful markdown editing capabilities.
+
+**Features:**
+- GitHub Flavored Markdown with live preview
+- Auto-save to localStorage
+- URL-based notes (e.g., `#my-note`)
+- Multiple view modes (split, edit, preview)
+- Copy markdown or HTML to clipboard
+- Keyboard shortcuts for quick navigation
+
+**Tech Stack:** Vanilla JavaScript, marked.js, DOMPurify
+
+[→ View project README](./notepad-app/README.md)
+
+---
+
 ### 🌐 [Chrome Extension - Website Blocker](./chrome-extension)
 
 A Chrome extension to block distracting websites and stay focused.
@@ -31,6 +49,7 @@ A Chrome extension to block distracting websites and stay focused.
 
 ```
 monorepo/
+├── notepad-app/               # Markdown notepad web application
 ├── chrome-extension/          # Website blocker Chrome extension
 ├── [future-project-1]/        # Your next project
 ├── [future-project-2]/        # Another project
@@ -43,6 +62,7 @@ Each project lives in its own directory with its own README, dependencies, and s
 
 ### Quick Navigation
 
+- **Markdown Notepad**: `cd notepad-app`
 - **Chrome Extension**: `cd chrome-extension`
 
 ## Adding New Projects

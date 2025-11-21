@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markdown Notepad</title>
+    <link rel="stylesheet" href="styles.css">
+    <!-- marked.js for GitHub Flavored Markdown -->
+    <script src="https://cdn.jsdelivr.net/npm/marked@11.1.0/marked.min.js"></script>
+    <!-- DOMPurify for XSS protection -->
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.6/dist/purify.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <h1 class="logo">📝 Markdown Notepad</h1>
+                <div class="note-info">
+                    <span class="note-name" id="noteName">default</span>
+                    <span class="save-status" id="saveStatus">Saved</span>
+                </div>
+            </div>
+            <div class="header-right">
+                <button class="btn btn-view" id="toggleView" title="Toggle View Mode">
+                    <span id="viewIcon">⚡</span> Split View
+                </button>
+                <button class="btn" id="copyMarkdown" title="Copy Markdown">
+                    📋 Copy MD
+                </button>
+                <button class="btn" id="copyHTML" title="Copy HTML">
+                    📋 Copy HTML
+                </button>
+                <button class="btn btn-secondary" id="newNote" title="Create New Note">
+                    ➕ New Note
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="main-content" id="mainContent">
+            <!-- Editor Panel -->
+            <div class="editor-panel" id="editorPanel">
+                <div class="panel-header">
+                    <h2>Editor</h2>
+                    <span class="char-count" id="charCount">0 characters</span>
+                </div>
+                <textarea
+                    id="editor"
+                    class="editor"
+                    placeholder="Start typing your markdown here...
+
+# Welcome to Markdown Notepad!
+
+This notepad supports **GitHub Flavored Markdown**.
+
+## Features
+- Live preview
+- Auto-save to browser storage
+- URL-based notes (try changing the URL: #my-note)
+- Multiple view modes
+
+## Markdown Examples
+
+### Text Formatting
+**Bold text**, *italic text*, ~~strikethrough~~
+
+### Lists
+- Bullet point 1
+- Bullet point 2
+  - Nested item
+
+1. Numbered item
+2. Another item
+
+### Task Lists
+- [x] Completed task
+- [ ] Pending task
+
+### Code
+Inline `code` or code blocks:
+
+```javascript
+function hello() {
+    console.log('Hello, World!');
+}
+```
+
+### Tables
+| Header 1 | Header 2 |
+|----------|----------|
+| Cell 1   | Cell 2   |
+
+### Links & Images
+[Link text](https://example.com)
+
+### Blockquotes
+> This is a blockquote
+> - with a list inside
+
+---
+
+Change the URL hash to create different notes! Example: `#my-shopping-list`
+"></textarea>
+            </div>
+
+            <!-- Preview Panel -->
+            <div class="preview-panel" id="previewPanel">
+                <div class="panel-header">
+                    <h2>Preview</h2>
+                </div>
+                <div id="preview" class="preview markdown-body"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
