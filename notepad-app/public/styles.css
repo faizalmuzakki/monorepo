@@ -96,6 +96,10 @@ body {
     color: var(--text-tertiary);
 }
 
+.save-status.error {
+    color: #d1242f;
+}
+
 /* Button Styles */
 .btn {
     background: var(--accent-color);

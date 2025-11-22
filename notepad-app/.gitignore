@@ -1,0 +1,36 @@
+# Wrangler
+.wrangler/
+.dev.vars
+.mf/
+
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Environment
+.env
+.env.local
+.env.production
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+logs/
+
+# Build
+dist/
+build/
+
+# Cloudflare
+wrangler.toml.backup

@@ -1,19 +1,21 @@
-// Markdown Notepad Application
+// Markdown Notepad Application - Cloud Version
+// Uses Cloudflare D1 for storage via API
 (function() {
     'use strict';
 
     // Configuration
     const CONFIG = {
-        AUTO_SAVE_DELAY: 500, // ms
-        DEFAULT_NOTE_NAME: 'default',
-        STORAGE_PREFIX: 'markdown_notepad_',
+        AUTO_SAVE_DELAY: 1000, // ms (increased for cloud saves)
+        API_BASE_URL: '/api',
         VIEW_MODES: ['split', 'edit', 'preview']
     };
 
     // State
-    let currentNoteName = CONFIG.DEFAULT_NOTE_NAME;
+    let currentNoteId = null;
     let autoSaveTimer = null;
     let currentViewMode = 0; // 0: split, 1: edit, 2: preview
+    let isLoading = false;
+    let isSaving = false;
 
     // DOM Elements
     const elements = {
@@ -45,8 +47,6 @@
     function init() {
         setupEventListeners();
         loadFromURL();
-        updatePreview();
-        updateCharCount();
 
         // Listen for URL hash changes
         window.addEventListener('hashchange', loadFromURL);
@@ -71,7 +71,7 @@
     function handleEditorInput() {
         updatePreview();
         updateCharCount();
-        showSaveStatus('saving');
+        showSaveStatus('pending');
 
         // Debounce auto-save
         if (autoSaveTimer) {
@@ -80,7 +80,6 @@
 
         autoSaveTimer = setTimeout(() => {
             saveNote();
-            showSaveStatus('saved');
         }, CONFIG.AUTO_SAVE_DELAY);
     }
 
@@ -106,74 +105,142 @@
 
     // Show save status
     function showSaveStatus(status) {
-        if (status === 'saving') {
-            elements.saveStatus.textContent = 'Saving...';
-            elements.saveStatus.classList.add('saving');
-        } else {
-            elements.saveStatus.textContent = 'Saved ✓';
-            elements.saveStatus.classList.remove('saving');
+        elements.saveStatus.classList.remove('saving', 'error');
+
+        switch (status) {
+            case 'loading':
+                elements.saveStatus.textContent = 'Loading...';
+                elements.saveStatus.classList.add('saving');
+                break;
+            case 'pending':
+                elements.saveStatus.textContent = 'Unsaved';
+                elements.saveStatus.classList.add('saving');
+                break;
+            case 'saving':
+                elements.saveStatus.textContent = 'Saving...';
+                elements.saveStatus.classList.add('saving');
+                break;
+            case 'saved':
+                elements.saveStatus.textContent = 'Saved ✓';
+                break;
+            case 'error':
+                elements.saveStatus.textContent = 'Error!';
+                elements.saveStatus.classList.add('error');
+                break;
         }
     }
 
-    // Save note to localStorage
-    function saveNote() {
-        const content = elements.editor.value;
-        const storageKey = CONFIG.STORAGE_PREFIX + currentNoteName;
+    // Save note to cloud (API)
+    async function saveNote() {
+        if (isSaving || !currentNoteId) {
+            return;
+        }
+
+        isSaving = true;
+        showSaveStatus('saving');
 
         try {
-            localStorage.setItem(storageKey, content);
-            console.log(`Saved note: ${currentNoteName}`);
-        } catch (e) {
-            console.error('Failed to save note:', e);
-            elements.saveStatus.textContent = 'Error saving!';
-            elements.saveStatus.style.color = 'red';
+            const content = elements.editor.value;
+
+            const response = await fetch(`${CONFIG.API_BASE_URL}/notes/${currentNoteId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ content }),
+            });
+
+            if (!response.ok) {
+                throw new Error(`Failed to save: ${response.statusText}`);
+            }
+
+            const result = await response.json();
+            console.log(`Saved note: ${currentNoteId}`, result);
+            showSaveStatus('saved');
+
+        } catch (error) {
+            console.error('Error saving note:', error);
+            showSaveStatus('error');
+        } finally {
+            isSaving = false;
         }
     }
 
-    // Load note from localStorage
-    function loadNote(noteName) {
-        const storageKey = CONFIG.STORAGE_PREFIX + noteName;
-        const content = localStorage.getItem(storageKey);
-
-        if (content !== null) {
-            elements.editor.value = content;
-            console.log(`Loaded note: ${noteName}`);
-        } else {
-            // If note doesn't exist and it's not the default, create empty note
-            if (noteName !== CONFIG.DEFAULT_NOTE_NAME) {
-                elements.editor.value = '';
-            }
-            // Otherwise keep the placeholder text
+    // Load note from cloud (API)
+    async function loadNote(noteId) {
+        if (isLoading || !noteId) {
+            return;
         }
 
-        updatePreview();
-        updateCharCount();
+        isLoading = true;
+        showSaveStatus('loading');
+
+        try {
+            const response = await fetch(`${CONFIG.API_BASE_URL}/notes/${noteId}`);
+
+            if (!response.ok) {
+                throw new Error(`Failed to load: ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            console.log(`Loaded note: ${noteId}`, data);
+
+            // Set editor content
+            if (data.exists && data.content) {
+                elements.editor.value = data.content;
+            } else {
+                // New note - start with empty or placeholder
+                elements.editor.value = '';
+            }
+
+            updatePreview();
+            updateCharCount();
+            showSaveStatus(data.exists ? 'saved' : 'pending');
+
+        } catch (error) {
+            console.error('Error loading note:', error);
+            showSaveStatus('error');
+            // Show error but allow user to type
+            elements.editor.value = '';
+            updatePreview();
+            updateCharCount();
+        } finally {
+            isLoading = false;
+        }
     }
 
     // Load note from URL hash
-    function loadFromURL() {
+    async function loadFromURL() {
         // Save current note before switching
-        if (currentNoteName) {
-            saveNote();
+        if (currentNoteId && autoSaveTimer) {
+            clearTimeout(autoSaveTimer);
+            await saveNote();
         }
 
-        // Get note name from URL hash
+        // Get note ID from URL hash
         const hash = window.location.hash.slice(1); // Remove the # symbol
-        const noteName = hash || CONFIG.DEFAULT_NOTE_NAME;
 
-        // Sanitize note name (only allow alphanumeric, hyphens, and underscores)
-        const sanitizedNoteName = noteName.replace(/[^a-zA-Z0-9\-_]/g, '-');
+        if (!hash) {
+            // No hash - this shouldn't happen as root redirects
+            // But handle it gracefully
+            console.log('No hash in URL, waiting for redirect...');
+            return;
+        }
 
-        currentNoteName = sanitizedNoteName;
-        elements.noteName.textContent = sanitizedNoteName;
+        // Sanitize note ID (only allow alphanumeric and hyphens)
+        const sanitizedId = hash.replace(/[^a-zA-Z0-9\-]/g, '');
 
         // Update URL if sanitization changed it
-        if (sanitizedNoteName !== noteName && sanitizedNoteName !== CONFIG.DEFAULT_NOTE_NAME) {
-            window.location.hash = sanitizedNoteName;
+        if (sanitizedId !== hash) {
+            window.location.hash = sanitizedId;
             return; // Will trigger hashchange event
         }
 
-        loadNote(currentNoteName);
+        currentNoteId = sanitizedId;
+        elements.noteName.textContent = sanitizedId;
+
+        // Load the note
+        await loadNote(currentNoteId);
     }
 
     // Toggle view mode (split, edit only, preview only)
@@ -239,21 +306,34 @@
 
     // Create new note
     function createNewNote() {
-        const noteName = prompt('Enter a name for your new note:', '');
+        // Generate random ID (client-side)
+        const randomId = generateRandomId(8);
+        window.location.hash = randomId;
+    }
 
-        if (noteName && noteName.trim()) {
-            const sanitizedName = noteName.trim().replace(/[^a-zA-Z0-9\-_]/g, '-');
-            window.location.hash = sanitizedName;
+    // Generate random ID
+    function generateRandomId(length) {
+        const charset = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+        let result = '';
+        const values = new Uint8Array(length);
+        crypto.getRandomValues(values);
+
+        for (let i = 0; i < length; i++) {
+            result += charset[values[i] % charset.length];
         }
+
+        return result;
     }
 
     // Handle keyboard shortcuts
     function handleKeyboardShortcuts(e) {
-        // Ctrl/Cmd + S: Save (already auto-saves, just show confirmation)
+        // Ctrl/Cmd + S: Save immediately
         if ((e.ctrlKey || e.metaKey) && e.key === 's') {
             e.preventDefault();
+            if (autoSaveTimer) {
+                clearTimeout(autoSaveTimer);
+            }
             saveNote();
-            showSaveStatus('saved');
         }
 
         // Ctrl/Cmd + E: Toggle to edit mode
@@ -278,11 +358,12 @@
     }
 
     // Save before unload
-    window.addEventListener('beforeunload', () => {
+    window.addEventListener('beforeunload', (e) => {
         if (autoSaveTimer) {
             clearTimeout(autoSaveTimer);
+            // Note: We can't await here, but we try to save
+            saveNote();
         }
-        saveNote();
     });
 
     // Initialize on DOM ready
@@ -294,7 +375,7 @@
 
     // Export API for debugging (optional)
     window.MarkdownNotepad = {
-        getCurrentNote: () => currentNoteName,
+        getCurrentNote: () => currentNoteId,
         getContent: () => elements.editor.value,
         setContent: (content) => {
             elements.editor.value = content;
@@ -302,16 +383,8 @@
             updateCharCount();
         },
         saveNote,
-        loadNote,
-        listNotes: () => {
-            const notes = [];
-            for (let i = 0; i < localStorage.length; i++) {
-                const key = localStorage.key(i);
-                if (key.startsWith(CONFIG.STORAGE_PREFIX)) {
-                    notes.push(key.replace(CONFIG.STORAGE_PREFIX, ''));
-                }
-            }
-            return notes;
+        loadNote: (id) => {
+            window.location.hash = id;
         }
     };
 })();
