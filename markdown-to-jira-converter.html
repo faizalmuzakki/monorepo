@@ -259,12 +259,17 @@
             // Remove horizontal rules (---)
             output = output.replace(/^---+$/gm, '');
 
-            // Convert headers (## or ### or ####) to JIRA bold format
-            output = output.replace(/^#{2,4}\s+(.+)$/gm, '*$1*');
-
             // Convert markdown bold (**text**) to JIRA bold (*text*)
-            // Handle bold text that's not already converted
+            // Must run before header conversion to avoid malformed output
             output = output.replace(/\*\*(.+?)\*\*/g, '*$1*');
+
+            // Convert headers (## or ### or ####) to JIRA bold format
+            // Strip any existing bold markers from header content to avoid duplication
+            output = output.replace(/^#{2,4}\s+(.+)$/gm, (match, content) => {
+                // Remove JIRA bold markers from content since header itself will be bold
+                const cleanContent = content.replace(/\*([^*]+)\*/g, '$1');
+                return '*' + cleanContent + '*';
+            });
 
             // Convert inline code (`code`) to plain text
             output = output.replace(/`([^`]+)`/g, '$1');
