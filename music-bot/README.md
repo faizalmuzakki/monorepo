@@ -26,6 +26,7 @@ A Discord music bot that plays music from YouTube and Spotify in voice channels.
 | `/loop` | Toggle loop mode for the current song |
 | `/clear` | Clear the music queue |
 | `/leave` | Make the bot leave the voice channel |
+| `/urban <term>` | Look up a word on Urban Dictionary |
 
 ## Prerequisites
 
