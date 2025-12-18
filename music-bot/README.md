@@ -10,6 +10,8 @@ A Discord music bot that plays music from YouTube and Spotify in voice channels.
 - Slash commands for easy interaction
 - Auto-leave after inactivity
 - Beautiful embedded messages
+- AI-powered chat summarization using Claude 3.5 Haiku
+- Urban Dictionary lookups
 
 ## Commands
 
@@ -27,12 +29,14 @@ A Discord music bot that plays music from YouTube and Spotify in voice channels.
 | `/clear` | Clear the music queue |
 | `/leave` | Make the bot leave the voice channel |
 | `/urban <term>` | Look up a word on Urban Dictionary |
+| `/summarize [hours] [channel]` | Summarize chat history using Claude AI |
 
 ## Prerequisites
 
 - Node.js 18.0.0 or higher
 - FFmpeg installed on your system
 - A Discord bot token
+- Anthropic API key (for /summarize command)
 
 ## Installation
 
@@ -67,6 +71,7 @@ A Discord music bot that plays music from YouTube and Spotify in voice channels.
    DISCORD_TOKEN=your_discord_bot_token
    CLIENT_ID=your_client_id
    GUILD_ID=your_guild_id  # Optional, for testing
+   ANTHROPIC_API_KEY=your_anthropic_api_key  # For /summarize
    ```
 
 ## Getting Discord Bot Credentials
@@ -92,6 +97,7 @@ A Discord music bot that plays music from YouTube and Spotify in voice channels.
    - Send Messages
    - Embed Links
    - Use Slash Commands
+   - Read Message History (for /summarize)
 4. Copy the generated URL and open it in your browser
 5. Select your server and authorize the bot
 
