@@ -7,9 +7,9 @@ services:
       - .env
     environment:
       - NODE_ENV=production
-    # Uncomment if you need to expose any ports (not required for Discord bot)
-    # ports:
-    #   - "3000:3000"
+    ports:
+      # Admin API port (for dashboard)
+      - "${API_PORT:-3000}:${API_PORT:-3000}"
     volumes:
       # Persist SQLite database
       - ./data:/app/data

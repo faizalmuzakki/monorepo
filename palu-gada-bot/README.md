@@ -19,6 +19,7 @@ A multi-purpose Discord bot - "apa lu mau, gua ada" (whatever you need, I got it
 - Beautiful embedded messages
 - SQLite database for persistent storage
 - Guild allowlist mode (restrict bot to specific servers)
+- Web-based admin panel with Discord OAuth
 
 ## Commands
 
@@ -122,6 +123,75 @@ The bot uses SQLite for persistent storage. Data is stored in `data/bot.db`.
 - `allowed_guilds` - Allowlist for guild access control
 - `bot_config` - Key-value store for bot settings
 - `user_preferences` - Per-user settings (for future features)
+- `guild_commands` - Enable/disable commands per server
+
+## Admin Panel
+
+The bot includes a web-based admin panel for managing servers and commands.
+
+### Features
+
+- Discord OAuth2 login
+- View bot statistics (servers, users, uptime, memory)
+- Manage server allowlist (owner only)
+- Enable/disable commands per server
+- View all servers the bot is in
+
+### Architecture
+
+```
+┌─────────────────────┐      ┌──────────────────────┐
+│  Cloudflare Pages   │      │   Docker Container   │
+│  (admin-panel/)     │─────▶│  ┌────────────────┐  │
+│                     │ API  │  │  Express API   │  │
+│  Static frontend    │      │  │  :3000         │  │
+└─────────────────────┘      │  └────────────────┘  │
+                             │  ┌────────────────┐  │
+                             │  │  Discord Bot   │  │
+                             │  └────────────────┘  │
+                             └──────────────────────┘
+```
+
+### Setup
+
+1. **Get Discord OAuth2 credentials:**
+   - Go to [Discord Developer Portal](https://discord.com/developers/applications)
+   - Select your application → OAuth2
+   - Copy the **Client Secret**
+   - Add a redirect URI: `https://your-admin-panel.pages.dev/callback`
+
+2. **Configure environment variables:**
+   ```env
+   CLIENT_SECRET=your_client_secret
+   OWNER_ID=your_discord_user_id
+   JWT_SECRET=generate_a_random_string
+   OAUTH_REDIRECT_URI=https://your-admin-panel.pages.dev/callback
+   ADMIN_PANEL_URL=https://your-admin-panel.pages.dev
+   ```
+
+3. **Deploy admin panel to Cloudflare Pages:**
+   ```bash
+   cd admin-panel
+   # Connect to Cloudflare Pages via dashboard or wrangler
+   # Set the build output directory to: admin-panel
+   ```
+
+4. **Update the API URL in the frontend:**
+   - Open `admin-panel/app.js`
+   - Or visit `https://your-panel.pages.dev#config` to set it
+
+### Local Development
+
+```bash
+# Start the bot (includes API server)
+npm start
+
+# Serve admin panel locally (use any static server)
+cd admin-panel
+npx serve .
+# or
+python -m http.server 5173
+```
 
 ## Getting Discord Bot Credentials
 

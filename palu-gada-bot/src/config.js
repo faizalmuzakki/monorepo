@@ -1,5 +1,6 @@
 import dotenv from 'dotenv';
 import { isGuildAllowed, getAllowedGuilds } from './database/models.js';
+import crypto from 'crypto';
 
 dotenv.config();
 
@@ -10,6 +11,7 @@ const config = {
     // Discord
     token: process.env.DISCORD_TOKEN,
     clientId: process.env.CLIENT_ID,
+    clientSecret: process.env.CLIENT_SECRET, // For OAuth2
     guildId: process.env.GUILD_ID, // For command deployment
 
     // API Keys
@@ -25,6 +27,19 @@ const config = {
 
     // Comma-separated list of allowed guild IDs (loaded into DB on first run)
     allowedGuildsEnv: process.env.ALLOWED_GUILDS?.split(',').filter(Boolean) || [],
+
+    // Admin API Settings
+    apiPort: parseInt(process.env.API_PORT) || 3000,
+    apiEnabled: process.env.API_ENABLED !== 'false',
+
+    // JWT Secret (auto-generate if not provided)
+    jwtSecret: process.env.JWT_SECRET || crypto.randomBytes(32).toString('hex'),
+
+    // OAuth2 Redirect URI (your Cloudflare Pages URL + /callback)
+    oauthRedirectUri: process.env.OAUTH_REDIRECT_URI || 'http://localhost:5173/callback',
+
+    // Admin Panel URL (for CORS)
+    adminPanelUrl: process.env.ADMIN_PANEL_URL || 'http://localhost:5173',
 };
 
 /**
@@ -86,7 +101,16 @@ export function validateConfig() {
         console.warn('[WARN] OWNER_ID not set - owner-only commands will be disabled');
     }
 
+    if (config.apiEnabled && !config.clientSecret) {
+        console.warn('[WARN] CLIENT_SECRET not set - Admin panel OAuth will not work');
+    }
+
+    if (config.apiEnabled && !process.env.JWT_SECRET) {
+        console.warn('[WARN] JWT_SECRET not set - using auto-generated secret (tokens will invalidate on restart)');
+    }
+
     console.log(`[INFO] Guild mode: ${config.guildMode}`);
+    console.log(`[INFO] Admin API: ${config.apiEnabled ? 'enabled' : 'disabled'}`);
 }
 
 export default config;

@@ -63,6 +63,17 @@ function initDatabase() {
         )
     `);
 
+    // Guild command toggles (enable/disable commands per guild)
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS guild_commands (
+            guild_id TEXT NOT NULL,
+            command_name TEXT NOT NULL,
+            enabled INTEGER DEFAULT 1,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (guild_id, command_name)
+        )
+    `);
+
     console.log('[INFO] Database initialized');
 }
 

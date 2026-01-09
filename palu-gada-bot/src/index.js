@@ -3,7 +3,8 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { readdirSync } from 'fs';
 import config, { validateConfig, checkGuildAccess } from './config.js';
-import { addAllowedGuild } from './database/models.js';
+import { addAllowedGuild, isCommandEnabled } from './database/models.js';
+import { startApiServer, setDiscordClient } from './api/server.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -49,9 +50,15 @@ for (const file of commandFiles) {
 }
 
 // Handle ready event
-client.once(Events.ClientReady, (readyClient) => {
+client.once(Events.ClientReady, async (readyClient) => {
     console.log(`[INFO] Bot is ready! Logged in as ${readyClient.user.tag}`);
     console.log(`[INFO] Serving ${readyClient.guilds.cache.size} guild(s)`);
+
+    // Start API server if enabled
+    if (config.apiEnabled) {
+        setDiscordClient(client);
+        await startApiServer(config.apiPort);
+    }
 });
 
 // Handle slash command interactions
@@ -71,6 +78,14 @@ client.on(Events.InteractionCreate, async (interaction) => {
     if (!command) {
         console.error(`[ERROR] No command matching ${interaction.commandName} was found.`);
         return;
+    }
+
+    // Check if command is enabled for this guild
+    if (interaction.guildId && !isCommandEnabled(interaction.guildId, interaction.commandName)) {
+        return interaction.reply({
+            content: `The \`/${interaction.commandName}\` command is disabled in this server.`,
+            ephemeral: true,
+        });
     }
 
     try {

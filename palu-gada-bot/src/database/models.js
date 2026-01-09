@@ -34,6 +34,17 @@ const statements = {
             settings = excluded.settings,
             updated_at = CURRENT_TIMESTAMP
     `),
+
+    // Guild commands
+    getGuildCommands: db.prepare('SELECT command_name, enabled FROM guild_commands WHERE guild_id = ?'),
+    getGuildCommand: db.prepare('SELECT enabled FROM guild_commands WHERE guild_id = ? AND command_name = ?'),
+    setGuildCommand: db.prepare(`
+        INSERT INTO guild_commands (guild_id, command_name, enabled)
+        VALUES (?, ?, ?)
+        ON CONFLICT(guild_id, command_name) DO UPDATE SET
+            enabled = excluded.enabled,
+            updated_at = CURRENT_TIMESTAMP
+    `),
 };
 
 /**
@@ -110,6 +121,29 @@ export function setUserPreferences(userId, settings) {
     return statements.setUserPrefs.run(userId, JSON.stringify(settings));
 }
 
+/**
+ * Guild Commands (enable/disable per guild)
+ */
+export function getGuildCommands(guildId) {
+    const rows = statements.getGuildCommands.all(guildId);
+    const commands = {};
+    for (const row of rows) {
+        commands[row.command_name] = row.enabled === 1;
+    }
+    return commands;
+}
+
+export function isCommandEnabled(guildId, commandName) {
+    const row = statements.getGuildCommand.get(guildId, commandName);
+    // If not in database, default to enabled
+    if (!row) return true;
+    return row.enabled === 1;
+}
+
+export function setGuildCommand(guildId, commandName, enabled) {
+    return statements.setGuildCommand.run(guildId, commandName, enabled ? 1 : 0);
+}
+
 export default {
     getGuildSettings,
     setGuildSettings,
@@ -121,4 +155,7 @@ export default {
     setConfig,
     getUserPreferences,
     setUserPreferences,
+    getGuildCommands,
+    isCommandEnabled,
+    setGuildCommand,
 };
