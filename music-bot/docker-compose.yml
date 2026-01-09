@@ -1,0 +1,22 @@
+services:
+  music-bot:
+    build: .
+    container_name: discord-music-bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+    # Uncomment if you need to expose any ports (not required for Discord bot)
+    # ports:
+    #   - "3000:3000"
+    volumes:
+      # Optional: persist any data/logs
+      - ./logs:/app/logs
+    # Resource limits (adjust based on your system)
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M

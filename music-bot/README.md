@@ -118,6 +118,64 @@ A Discord music bot that plays music from YouTube and Spotify in voice channels.
    npm run dev
    ```
 
+## Docker Deployment
+
+### Prerequisites
+- Docker and Docker Compose installed
+
+### Quick Start with Docker
+
+1. Create your `.env` file:
+   ```bash
+   cp .env.example .env
+   # Edit .env with your credentials
+   ```
+
+2. Deploy slash commands (required once):
+   ```bash
+   docker compose run --rm music-bot node src/deploy-commands.js
+   ```
+
+3. Start the bot:
+   ```bash
+   docker compose up -d
+   ```
+
+### Docker Commands
+
+```bash
+# Start the bot (detached)
+docker compose up -d
+
+# View logs
+docker compose logs -f
+
+# Stop the bot
+docker compose down
+
+# Rebuild after code changes
+docker compose up -d --build
+
+# Restart the bot
+docker compose restart
+```
+
+### Running on Raspberry Pi
+
+The Docker image works on ARM64 (Raspberry Pi 4):
+
+```bash
+# Clone and setup
+git clone <your-repo>
+cd music-bot
+cp .env.example .env
+nano .env  # Add your tokens
+
+# Deploy commands and start
+docker compose run --rm music-bot node src/deploy-commands.js
+docker compose up -d
+```
+
 ## Supported Formats
 
 ### YouTube
