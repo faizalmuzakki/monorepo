@@ -1,20 +1,26 @@
-# Discord Music Bot
+# Palu Gada Bot
 
-A Discord music bot that plays music from YouTube and Spotify in voice channels.
+A multi-purpose Discord bot - "apa lu mau, gua ada" (whatever you need, I got it).
 
 ## Features
 
+### Music
 - Play music from YouTube URLs and search queries
 - Play music from Spotify tracks, playlists, and albums
 - Queue management with shuffle and loop functionality
-- Slash commands for easy interaction
 - Auto-leave after inactivity
-- Beautiful embedded messages
+
+### Utilities
 - AI-powered chat summarization using Claude 3.5 Haiku
 - Urban Dictionary lookups
 
+### General
+- Slash commands for easy interaction
+- Beautiful embedded messages
+
 ## Commands
 
+### Music Commands
 | Command | Description |
 |---------|-------------|
 | `/play <query>` | Play a song from YouTube/Spotify URL or search query |
@@ -28,6 +34,10 @@ A Discord music bot that plays music from YouTube and Spotify in voice channels.
 | `/loop` | Toggle loop mode for the current song |
 | `/clear` | Clear the music queue |
 | `/leave` | Make the bot leave the voice channel |
+
+### Utility Commands
+| Command | Description |
+|---------|-------------|
 | `/urban <term>` | Look up a word on Urban Dictionary |
 | `/summarize [hours] [channel]` | Summarize chat history using Claude AI |
 
@@ -40,9 +50,9 @@ A Discord music bot that plays music from YouTube and Spotify in voice channels.
 
 ## Installation
 
-1. Clone the repository and navigate to the music-bot folder:
+1. Clone the repository and navigate to the bot folder:
    ```bash
-   cd music-bot
+   cd palu-gada-bot
    ```
 
 2. Install dependencies:
@@ -133,7 +143,7 @@ A Discord music bot that plays music from YouTube and Spotify in voice channels.
 
 2. Deploy slash commands (required once):
    ```bash
-   docker compose run --rm music-bot node src/deploy-commands.js
+   docker compose run --rm palu-gada-bot node src/deploy-commands.js
    ```
 
 3. Start the bot:
@@ -160,19 +170,19 @@ docker compose up -d --build
 docker compose restart
 ```
 
-### Running on Raspberry Pi
+### Running on Raspberry Pi / Mini PC
 
-The Docker image works on ARM64 (Raspberry Pi 4):
+The Docker image works on ARM64 and x86:
 
 ```bash
 # Clone and setup
 git clone <your-repo>
-cd music-bot
+cd palu-gada-bot
 cp .env.example .env
 nano .env  # Add your tokens
 
 # Deploy commands and start
-docker compose run --rm music-bot node src/deploy-commands.js
+docker compose run --rm palu-gada-bot node src/deploy-commands.js
 docker compose up -d
 ```
 

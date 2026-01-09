@@ -1,7 +1,7 @@
 {
-  "name": "discord-music-bot",
+  "name": "palu-gada-bot",
   "version": "1.0.0",
-  "description": "A Discord music bot that plays YouTube and Spotify music in voice channels",
+  "description": "Palu Gada Bot - A multi-purpose Discord bot with music, AI chat summarization, and more",
   "main": "src/index.js",
   "type": "module",
   "scripts": {
@@ -11,11 +11,14 @@
   },
   "keywords": [
     "discord",
-    "music",
     "bot",
+    "music",
     "youtube",
     "spotify",
-    "voice"
+    "voice",
+    "ai",
+    "claude",
+    "utility"
   ],
   "author": "",
   "license": "MIT",

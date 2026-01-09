@@ -1,7 +1,7 @@
 services:
-  music-bot:
+  palu-gada-bot:
     build: .
-    container_name: discord-music-bot
+    container_name: palu-gada-bot
     restart: unless-stopped
     env_file:
       - .env
