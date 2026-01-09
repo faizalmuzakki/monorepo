@@ -2,12 +2,22 @@ import { Client, Collection, Events, GatewayIntentBits } from 'discord.js';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { readdirSync } from 'fs';
-import dotenv from 'dotenv';
-
-dotenv.config();
+import config, { validateConfig, checkGuildAccess } from './config.js';
+import { addAllowedGuild } from './database/models.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+
+// Validate configuration
+validateConfig();
+
+// Seed allowed guilds from environment variable (if any)
+if (config.allowedGuildsEnv.length > 0) {
+    console.log(`[INFO] Seeding ${config.allowedGuildsEnv.length} allowed guild(s) from environment`);
+    for (const guildId of config.allowedGuildsEnv) {
+        addAllowedGuild(guildId.trim(), 'env', 'Seeded from ALLOWED_GUILDS env var');
+    }
+}
 
 // Create Discord client with necessary intents
 const client = new Client({
@@ -48,6 +58,14 @@ client.once(Events.ClientReady, (readyClient) => {
 client.on(Events.InteractionCreate, async (interaction) => {
     if (!interaction.isChatInputCommand()) return;
 
+    // Check guild access
+    if (interaction.guildId && !checkGuildAccess(interaction.guildId)) {
+        return interaction.reply({
+            content: 'This bot is not authorized to operate in this server.',
+            ephemeral: true,
+        });
+    }
+
     const command = client.commands.get(interaction.commandName);
 
     if (!command) {
@@ -73,6 +91,16 @@ client.on(Events.InteractionCreate, async (interaction) => {
     }
 });
 
+// Handle bot joining a new guild
+client.on(Events.GuildCreate, (guild) => {
+    console.log(`[INFO] Joined new guild: ${guild.name} (${guild.id})`);
+
+    if (!checkGuildAccess(guild.id)) {
+        console.log(`[INFO] Guild ${guild.id} is not in allowlist, leaving...`);
+        guild.leave().catch(console.error);
+    }
+});
+
 // Handle errors
 client.on(Events.Error, (error) => {
     console.error('[ERROR] Discord client error:', error);
@@ -82,12 +110,18 @@ process.on('unhandledRejection', (error) => {
     console.error('[ERROR] Unhandled promise rejection:', error);
 });
 
+// Graceful shutdown
+process.on('SIGINT', () => {
+    console.log('[INFO] Shutting down...');
+    client.destroy();
+    process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+    console.log('[INFO] Shutting down...');
+    client.destroy();
+    process.exit(0);
+});
+
 // Login to Discord
-const token = process.env.DISCORD_TOKEN;
-
-if (!token) {
-    console.error('[ERROR] DISCORD_TOKEN is not set in environment variables!');
-    process.exit(1);
-}
-
-client.login(token);
+client.login(config.token);

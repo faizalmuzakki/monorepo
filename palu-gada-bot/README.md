@@ -17,6 +17,8 @@ A multi-purpose Discord bot - "apa lu mau, gua ada" (whatever you need, I got it
 ### General
 - Slash commands for easy interaction
 - Beautiful embedded messages
+- SQLite database for persistent storage
+- Guild allowlist mode (restrict bot to specific servers)
 
 ## Commands
 
@@ -81,8 +83,45 @@ A multi-purpose Discord bot - "apa lu mau, gua ada" (whatever you need, I got it
    DISCORD_TOKEN=your_discord_bot_token
    CLIENT_ID=your_client_id
    GUILD_ID=your_guild_id  # Optional, for testing
+   OWNER_ID=your_discord_user_id  # Your Discord ID
    ANTHROPIC_API_KEY=your_anthropic_api_key  # For /summarize
    ```
+
+## Configuration
+
+### Guild Access Control
+
+You can restrict the bot to only work in specific servers:
+
+```env
+# In .env file
+
+# Mode: 'open' (default) or 'allowlist'
+GUILD_MODE=allowlist
+
+# Comma-separated list of allowed guild IDs
+ALLOWED_GUILDS=123456789012345678,987654321098765432
+```
+
+| Mode | Behavior |
+|------|----------|
+| `open` | Bot works in any server (default) |
+| `allowlist` | Bot only works in servers listed in `ALLOWED_GUILDS` or database |
+
+When in allowlist mode:
+- Bot auto-leaves unauthorized servers
+- Commands return an error in unauthorized servers
+- Allowed guilds can be managed via database
+
+### Database
+
+The bot uses SQLite for persistent storage. Data is stored in `data/bot.db`.
+
+**Tables:**
+- `guild_settings` - Per-server configuration
+- `allowed_guilds` - Allowlist for guild access control
+- `bot_config` - Key-value store for bot settings
+- `user_preferences` - Per-user settings (for future features)
 
 ## Getting Discord Bot Credentials
 

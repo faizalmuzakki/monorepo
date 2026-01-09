@@ -11,7 +11,9 @@ services:
     # ports:
     #   - "3000:3000"
     volumes:
-      # Optional: persist any data/logs
+      # Persist SQLite database
+      - ./data:/app/data
+      # Optional: persist logs
       - ./logs:/app/logs
     # Resource limits (adjust based on your system)
     deploy:
