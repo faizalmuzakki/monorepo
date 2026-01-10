@@ -468,6 +468,31 @@ body {
     color: var(--text-secondary);
 }
 
+/* Alerts */
+.alert {
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+}
+
+.alert-warning {
+    background: rgba(254, 231, 92, 0.15);
+    border: 1px solid #fee75c;
+    color: #fee75c;
+}
+
+.alert strong {
+    display: block;
+    margin-bottom: 0.25rem;
+}
+
+/* Globally disabled command */
+.command-item.disabled-globally {
+    opacity: 0.6;
+    background: rgba(240, 71, 71, 0.1);
+    border: 1px solid var(--danger);
+}
+
 /* Responsive */
 @media (max-width: 768px) {
     #dashboard {

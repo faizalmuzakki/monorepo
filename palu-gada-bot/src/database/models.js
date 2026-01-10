@@ -45,6 +45,51 @@ const statements = {
             enabled = excluded.enabled,
             updated_at = CURRENT_TIMESTAMP
     `),
+
+    // Global commands
+    getGlobalCommands: db.prepare('SELECT command_name, enabled FROM global_commands'),
+    getGlobalCommand: db.prepare('SELECT enabled FROM global_commands WHERE command_name = ?'),
+    setGlobalCommand: db.prepare(`
+        INSERT INTO global_commands (command_name, enabled)
+        VALUES (?, ?)
+        ON CONFLICT(command_name) DO UPDATE SET
+            enabled = excluded.enabled,
+            updated_at = CURRENT_TIMESTAMP
+    `),
+
+    // Reminders
+    addReminder: db.prepare('INSERT INTO reminders (user_id, channel_id, guild_id, message, remind_at) VALUES (?, ?, ?, ?, ?)'),
+    getPendingReminders: db.prepare('SELECT * FROM reminders WHERE completed = 0 AND remind_at <= datetime(\'now\')'),
+    getUserReminders: db.prepare('SELECT * FROM reminders WHERE user_id = ? AND completed = 0 ORDER BY remind_at'),
+    completeReminder: db.prepare('UPDATE reminders SET completed = 1 WHERE id = ?'),
+    deleteReminder: db.prepare('DELETE FROM reminders WHERE id = ? AND user_id = ?'),
+
+    // Warnings
+    addWarning: db.prepare('INSERT INTO warnings (guild_id, user_id, moderator_id, reason) VALUES (?, ?, ?, ?)'),
+    getWarnings: db.prepare('SELECT * FROM warnings WHERE guild_id = ? AND user_id = ? ORDER BY created_at DESC'),
+    getWarningCount: db.prepare('SELECT COUNT(*) as count FROM warnings WHERE guild_id = ? AND user_id = ?'),
+    deleteWarning: db.prepare('DELETE FROM warnings WHERE id = ? AND guild_id = ?'),
+    clearWarnings: db.prepare('DELETE FROM warnings WHERE guild_id = ? AND user_id = ?'),
+
+    // Todos
+    addTodo: db.prepare('INSERT INTO user_todos (user_id, task) VALUES (?, ?)'),
+    getUserTodos: db.prepare('SELECT * FROM user_todos WHERE user_id = ? ORDER BY completed, created_at'),
+    completeTodo: db.prepare('UPDATE user_todos SET completed = 1 WHERE id = ? AND user_id = ?'),
+    deleteTodo: db.prepare('DELETE FROM user_todos WHERE id = ? AND user_id = ?'),
+    clearCompletedTodos: db.prepare('DELETE FROM user_todos WHERE user_id = ? AND completed = 1'),
+
+    // Notes
+    addNote: db.prepare('INSERT INTO user_notes (user_id, title, content) VALUES (?, ?, ?)'),
+    getUserNotes: db.prepare('SELECT * FROM user_notes WHERE user_id = ? ORDER BY updated_at DESC'),
+    getNote: db.prepare('SELECT * FROM user_notes WHERE id = ? AND user_id = ?'),
+    updateNote: db.prepare('UPDATE user_notes SET title = ?, content = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?'),
+    deleteNote: db.prepare('DELETE FROM user_notes WHERE id = ? AND user_id = ?'),
+
+    // AFK
+    setAfk: db.prepare('INSERT OR REPLACE INTO afk_status (user_id, message, since) VALUES (?, ?, CURRENT_TIMESTAMP)'),
+    getAfk: db.prepare('SELECT * FROM afk_status WHERE user_id = ?'),
+    removeAfk: db.prepare('DELETE FROM afk_status WHERE user_id = ?'),
+    getAllAfk: db.prepare('SELECT * FROM afk_status'),
 };
 
 /**
@@ -134,6 +179,13 @@ export function getGuildCommands(guildId) {
 }
 
 export function isCommandEnabled(guildId, commandName) {
+    // First check global toggle
+    const globalRow = statements.getGlobalCommand.get(commandName);
+    if (globalRow && globalRow.enabled === 0) {
+        return false; // Globally disabled
+    }
+
+    // Then check guild-specific toggle
     const row = statements.getGuildCommand.get(guildId, commandName);
     // If not in database, default to enabled
     if (!row) return true;
@@ -142,6 +194,139 @@ export function isCommandEnabled(guildId, commandName) {
 
 export function setGuildCommand(guildId, commandName, enabled) {
     return statements.setGuildCommand.run(guildId, commandName, enabled ? 1 : 0);
+}
+
+/**
+ * Global Commands (enable/disable globally)
+ */
+export function getGlobalCommands() {
+    const rows = statements.getGlobalCommands.all();
+    const commands = {};
+    for (const row of rows) {
+        commands[row.command_name] = row.enabled === 1;
+    }
+    return commands;
+}
+
+export function isGlobalCommandEnabled(commandName) {
+    const row = statements.getGlobalCommand.get(commandName);
+    if (!row) return true; // Default to enabled
+    return row.enabled === 1;
+}
+
+export function setGlobalCommand(commandName, enabled) {
+    return statements.setGlobalCommand.run(commandName, enabled ? 1 : 0);
+}
+
+/**
+ * Reminders
+ */
+export function addReminder(userId, channelId, guildId, message, remindAt) {
+    return statements.addReminder.run(userId, channelId, guildId, message, remindAt);
+}
+
+export function getPendingReminders() {
+    return statements.getPendingReminders.all();
+}
+
+export function getUserReminders(userId) {
+    return statements.getUserReminders.all(userId);
+}
+
+export function completeReminder(id) {
+    return statements.completeReminder.run(id);
+}
+
+export function deleteReminder(id, userId) {
+    return statements.deleteReminder.run(id, userId);
+}
+
+/**
+ * Warnings (Moderation)
+ */
+export function addWarning(guildId, userId, moderatorId, reason) {
+    return statements.addWarning.run(guildId, userId, moderatorId, reason);
+}
+
+export function getWarnings(guildId, userId) {
+    return statements.getWarnings.all(guildId, userId);
+}
+
+export function getWarningCount(guildId, userId) {
+    return statements.getWarningCount.get(guildId, userId).count;
+}
+
+export function deleteWarning(id, guildId) {
+    return statements.deleteWarning.run(id, guildId);
+}
+
+export function clearWarnings(guildId, userId) {
+    return statements.clearWarnings.run(guildId, userId);
+}
+
+/**
+ * Todos
+ */
+export function addTodo(userId, task) {
+    return statements.addTodo.run(userId, task);
+}
+
+export function getUserTodos(userId) {
+    return statements.getUserTodos.all(userId);
+}
+
+export function completeTodo(id, userId) {
+    return statements.completeTodo.run(id, userId);
+}
+
+export function deleteTodo(id, userId) {
+    return statements.deleteTodo.run(id, userId);
+}
+
+export function clearCompletedTodos(userId) {
+    return statements.clearCompletedTodos.run(userId);
+}
+
+/**
+ * Notes
+ */
+export function addNote(userId, title, content) {
+    return statements.addNote.run(userId, title, content);
+}
+
+export function getUserNotes(userId) {
+    return statements.getUserNotes.all(userId);
+}
+
+export function getNote(id, userId) {
+    return statements.getNote.get(id, userId);
+}
+
+export function updateNote(id, userId, title, content) {
+    return statements.updateNote.run(title, content, id, userId);
+}
+
+export function deleteNote(id, userId) {
+    return statements.deleteNote.run(id, userId);
+}
+
+/**
+ * AFK
+ */
+export function setAfk(userId, message) {
+    return statements.setAfk.run(userId, message);
+}
+
+export function getAfk(userId) {
+    return statements.getAfk.get(userId);
+}
+
+export function removeAfk(userId) {
+    return statements.removeAfk.run(userId);
+}
+
+export function getAllAfk() {
+    return statements.getAllAfk.all();
 }
 
 export default {
@@ -158,4 +343,31 @@ export default {
     getGuildCommands,
     isCommandEnabled,
     setGuildCommand,
+    getGlobalCommands,
+    isGlobalCommandEnabled,
+    setGlobalCommand,
+    addReminder,
+    getPendingReminders,
+    getUserReminders,
+    completeReminder,
+    deleteReminder,
+    addWarning,
+    getWarnings,
+    getWarningCount,
+    deleteWarning,
+    clearWarnings,
+    addTodo,
+    getUserTodos,
+    completeTodo,
+    deleteTodo,
+    clearCompletedTodos,
+    addNote,
+    getUserNotes,
+    getNote,
+    updateNote,
+    deleteNote,
+    setAfk,
+    getAfk,
+    removeAfk,
+    getAllAfk,
 };

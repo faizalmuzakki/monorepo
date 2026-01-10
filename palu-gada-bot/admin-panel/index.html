@@ -39,6 +39,9 @@
                     <a href="#" class="nav-item owner-only" data-page="allowlist">
                         <span class="icon">✅</span> Allowlist
                     </a>
+                    <a href="#" class="nav-item owner-only" data-page="global-commands">
+                        <span class="icon">⚙️</span> Global Commands
+                    </a>
                 </nav>
                 <div class="sidebar-footer">
                     <div class="user-info">
@@ -122,6 +125,18 @@
                     </div>
                     <div id="allowlist-guilds" class="allowlist-grid">
                         <!-- Allowed guilds will be loaded here -->
+                    </div>
+                </div>
+
+                <!-- Global Commands Page (Owner Only) -->
+                <div id="page-global-commands" class="page hidden">
+                    <h1>Global Command Settings</h1>
+                    <p class="section-desc">Enable or disable commands globally. Disabled commands will not work in any server.</p>
+                    <div class="alert alert-warning">
+                        <strong>Warning:</strong> Disabling a command here will disable it for ALL servers, regardless of per-server settings.
+                    </div>
+                    <div id="global-commands-list" class="commands-grid">
+                        <!-- Global commands will be loaded here -->
                     </div>
                 </div>
             </main>

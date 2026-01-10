@@ -175,6 +175,9 @@ function showPage(page) {
         case 'allowlist':
             loadAllowlist();
             break;
+        case 'global-commands':
+            loadGlobalCommands();
+            break;
     }
 }
 
@@ -391,6 +394,64 @@ async function removeFromAllowlist(guildId) {
 
 // Make allowlist functions available globally
 window.removeFromAllowlist = removeFromAllowlist;
+
+// Global Commands Page
+async function loadGlobalCommands() {
+    const container = document.getElementById('global-commands-list');
+    container.innerHTML = '<div class="loading">Loading global commands...</div>';
+
+    try {
+        const [commandsData, globalData] = await Promise.all([
+            apiRequest('/api/stats/commands'),
+            apiRequest('/api/guilds/global/commands'),
+        ]);
+
+        // Create a map of disabled commands
+        const disabledCommands = new Set(
+            globalData.commands
+                .filter(cmd => cmd.enabled === 0)
+                .map(cmd => cmd.command_name)
+        );
+
+        container.innerHTML = commandsData.commands.map(cmd => {
+            const enabled = !disabledCommands.has(cmd.name);
+            return `
+                <div class="command-item ${!enabled ? 'disabled-globally' : ''}">
+                    <div>
+                        <div class="command-name">/${cmd.name}</div>
+                        <div class="command-desc">${escapeHtml(cmd.description)}</div>
+                    </div>
+                    <label class="toggle">
+                        <input type="checkbox" ${enabled ? 'checked' : ''}
+                               onchange="toggleGlobalCommand('${cmd.name}', this.checked)">
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+            `;
+        }).join('');
+    } catch (error) {
+        container.innerHTML = `<p>Failed to load global commands: ${error.message}</p>`;
+    }
+}
+
+async function toggleGlobalCommand(commandName, enabled) {
+    try {
+        await apiRequest(`/api/guilds/global/commands/${commandName}`, {
+            method: 'PATCH',
+            body: JSON.stringify({ enabled }),
+        });
+
+        // Visual feedback - update the item styling
+        loadGlobalCommands();
+    } catch (error) {
+        console.error('Failed to toggle global command:', error);
+        alert('Failed to update command');
+        loadGlobalCommands();
+    }
+}
+
+// Make global command functions available globally
+window.toggleGlobalCommand = toggleGlobalCommand;
 
 // Utility Functions
 function escapeHtml(text) {

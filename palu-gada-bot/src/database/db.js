@@ -74,6 +74,73 @@ function initDatabase() {
         )
     `);
 
+    // Global command toggles (enable/disable commands globally)
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS global_commands (
+            command_name TEXT PRIMARY KEY,
+            enabled INTEGER DEFAULT 1,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    `);
+
+    // Reminders table
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS reminders (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id TEXT NOT NULL,
+            channel_id TEXT,
+            guild_id TEXT,
+            message TEXT NOT NULL,
+            remind_at DATETIME NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            completed INTEGER DEFAULT 0
+        )
+    `);
+
+    // Warnings table (for moderation)
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS warnings (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            guild_id TEXT NOT NULL,
+            user_id TEXT NOT NULL,
+            moderator_id TEXT NOT NULL,
+            reason TEXT NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    `);
+
+    // User todos table
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS user_todos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id TEXT NOT NULL,
+            task TEXT NOT NULL,
+            completed INTEGER DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    `);
+
+    // User notes table
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS user_notes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id TEXT NOT NULL,
+            title TEXT NOT NULL,
+            content TEXT NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    `);
+
+    // AFK status table
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS afk_status (
+            user_id TEXT PRIMARY KEY,
+            message TEXT,
+            since DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    `);
+
     console.log('[INFO] Database initialized');
 }
 

@@ -10,6 +10,8 @@ import {
     setGuildSettings,
     getGuildCommands,
     setGuildCommand,
+    getAllGlobalCommands,
+    setGlobalCommand,
 } from '../../database/models.js';
 
 const router = Router();
@@ -198,6 +200,39 @@ router.patch('/:guildId/commands/:commandName', (req, res) => {
     }
 
     setGuildCommand(guildId, commandName, enabled);
+    res.json({ success: true, command: commandName, enabled });
+});
+
+/**
+ * GET /api/guilds/global/commands
+ * Get all global command settings (owner only)
+ */
+router.get('/global/commands', (req, res) => {
+    if (!req.user.isOwner) {
+        return res.status(403).json({ error: 'Owner only' });
+    }
+
+    const globalCommands = getAllGlobalCommands();
+    res.json({ commands: globalCommands });
+});
+
+/**
+ * PATCH /api/guilds/global/commands/:commandName
+ * Enable/disable a command globally (owner only)
+ */
+router.patch('/global/commands/:commandName', (req, res) => {
+    if (!req.user.isOwner) {
+        return res.status(403).json({ error: 'Owner only' });
+    }
+
+    const { commandName } = req.params;
+    const { enabled } = req.body;
+
+    if (typeof enabled !== 'boolean') {
+        return res.status(400).json({ error: 'enabled must be a boolean' });
+    }
+
+    setGlobalCommand(commandName, enabled);
     res.json({ success: true, command: commandName, enabled });
 });
 
