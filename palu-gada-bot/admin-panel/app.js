@@ -464,11 +464,7 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-// Config page to set API URL (for development)
-if (window.location.hash === '#config') {
-    const newUrl = prompt('Enter API URL:', API_URL);
-    if (newUrl) {
-        localStorage.setItem('apiUrl', newUrl);
-        window.location.reload();
-    }
-}
+// API URL configuration has been removed for security reasons
+// The API URL is now only configurable via the API_URL constant at the top of this file
+// To change the API URL for development, modify the localStorage value directly in devtools:
+// localStorage.setItem('apiUrl', 'http://your-api-url');

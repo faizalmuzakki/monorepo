@@ -460,7 +460,10 @@ export function claimDaily(userId, amount) {
 export function canClaimDaily(userId) {
     const eco = getEconomy(userId);
     if (!eco.last_daily) return true;
-    const lastDaily = new Date(eco.last_daily);
+    // SQLite's CURRENT_TIMESTAMP stores UTC time without timezone indicator
+    // Append 'Z' to explicitly parse as UTC to avoid timezone mismatch
+    const lastDailyStr = eco.last_daily.endsWith('Z') ? eco.last_daily : eco.last_daily + 'Z';
+    const lastDaily = new Date(lastDailyStr);
     const now = new Date();
     return now.getTime() - lastDaily.getTime() >= 24 * 60 * 60 * 1000;
 }

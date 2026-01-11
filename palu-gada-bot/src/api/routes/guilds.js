@@ -120,8 +120,14 @@ router.get('/global/commands', (req, res) => {
         return res.status(403).json({ error: 'Owner only' });
     }
 
-    const globalCommands = getGlobalCommands();
-    res.json({ commands: globalCommands });
+    // Convert object to array format that frontend expects
+    // Frontend expects: [{ command_name: 'play', enabled: 1 }, ...]
+    const commandsObj = getGlobalCommands();
+    const commandsArray = Object.entries(commandsObj).map(([name, enabled]) => ({
+        command_name: name,
+        enabled: enabled ? 1 : 0,
+    }));
+    res.json({ commands: commandsArray });
 });
 
 /**
