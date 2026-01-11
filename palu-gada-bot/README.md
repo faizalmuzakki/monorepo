@@ -9,17 +9,50 @@ A multi-purpose Discord bot - "apa lu mau, gua ada" (whatever you need, I got it
 - Play music from Spotify tracks, playlists, and albums
 - Queue management with shuffle and loop functionality
 - Auto-leave after inactivity
+- Custom playlist saving and loading
+- Lyrics lookup
+- Volume control and seeking
 
-### Utilities
+### Utility
 - AI-powered chat summarization using Claude 3.5 Haiku
 - Urban Dictionary lookups
+- Weather information
+- QR code generation
+- URL shortening
+- Math expression evaluation
+- Dictionary definitions
+- Emoji information
 
-### General
-- Slash commands for easy interaction
-- Beautiful embedded messages
-- SQLite database for persistent storage
-- Guild allowlist mode (restrict bot to specific servers)
-- Web-based admin panel with Discord OAuth
+### Productivity
+- Reminders with DM/channel notifications
+- Personal todo lists
+- Note-taking system
+- AFK status with auto-notifications
+
+### Moderation
+- Warning system for users
+- Slowmode management
+- Channel/server lockdown
+- Server audit logging
+
+### Server Management
+- Welcome messages for new members
+- Auto-role assignment
+- Command enable/disable per server
+- Global command toggles
+
+### Economy & Leveling
+- XP-based leveling system
+- Server leaderboards
+- Virtual currency (wallet/bank)
+- Daily rewards
+- Balance transfers
+
+### Fun & Social
+- Birthday tracking and announcements
+- Starboard for highlighted messages
+- Giveaway system with button entries
+- Anonymous confessions
 
 ## Commands
 
@@ -37,12 +70,65 @@ A multi-purpose Discord bot - "apa lu mau, gua ada" (whatever you need, I got it
 | `/loop` | Toggle loop mode for the current song |
 | `/clear` | Clear the music queue |
 | `/leave` | Make the bot leave the voice channel |
+| `/lyrics [title]` | Get lyrics for current or specified song |
+| `/seek <position>` | Seek to a position in the current song |
+| `/volume [level]` | View or set playback volume (0-200%) |
+| `/playlist <subcommand>` | Manage custom playlists (create/save/load/delete/list/view) |
 
 ### Utility Commands
 | Command | Description |
 |---------|-------------|
 | `/urban <term>` | Look up a word on Urban Dictionary |
 | `/summarize [hours] [channel]` | Summarize chat history using Claude AI |
+| `/weather <location>` | Get weather information for a location |
+| `/qrcode <text>` | Generate a QR code |
+| `/shorten <url>` | Shorten a URL using is.gd |
+| `/math <expression>` | Evaluate a math expression |
+| `/define <word>` | Get dictionary definition of a word |
+| `/emoji <emoji>` | Get information about an emoji |
+
+### Productivity Commands
+| Command | Description |
+|---------|-------------|
+| `/remind <time> <message>` | Set a reminder |
+| `/reminders` | View your pending reminders |
+| `/todo <subcommand>` | Manage your todo list (add/list/complete/delete/clear) |
+| `/note <subcommand>` | Manage your notes (add/list/view/edit/delete) |
+| `/afk [message]` | Set your AFK status |
+
+### Moderation Commands
+| Command | Description |
+|---------|-------------|
+| `/warn <user> <reason>` | Warn a user |
+| `/warnings <user>` | View warnings for a user |
+| `/clearwarnings <user>` | Clear all warnings for a user |
+| `/slowmode <duration>` | Set channel slowmode (0s, 5s, 10s, 30s, 1m, 5m, 10m, 1h) |
+| `/lockdown <action>` | Lock or unlock a channel/server |
+| `/logs <subcommand>` | Configure server logging |
+
+### Server Management Commands
+| Command | Description |
+|---------|-------------|
+| `/welcomer <subcommand>` | Configure welcome messages (setup/message/toggle/status) |
+| `/autorole <subcommand>` | Configure auto-role (setup/toggle/status) |
+| `/toggle <command> <enabled>` | Enable/disable a command in this server |
+
+### Economy & Leveling Commands
+| Command | Description |
+|---------|-------------|
+| `/level [user]` | View your or another user's level |
+| `/leaderboard [type]` | View server levels or global economy rankings |
+| `/daily` | Claim your daily coins |
+| `/balance [subcommand]` | View/manage your balance (view/deposit/withdraw/transfer) |
+
+### Fun & Social Commands
+| Command | Description |
+|---------|-------------|
+| `/birthday <subcommand>` | Manage birthdays (set/view/remove/upcoming/today) |
+| `/starboard <subcommand>` | Configure starboard (setup/threshold/toggle/status) |
+| `/giveaway <subcommand>` | Manage giveaways (start/end/reroll/list) |
+| `/confession send <message>` | Send an anonymous confession |
+| `/confession setup <channel>` | Set up confession channel (admin) |
 
 ## Prerequisites
 
@@ -119,11 +205,25 @@ When in allowlist mode:
 The bot uses SQLite for persistent storage. Data is stored in `data/bot.db`.
 
 **Tables:**
-- `guild_settings` - Per-server configuration
+- `guild_settings` - Per-server configuration (welcome, autorole, starboard, etc.)
 - `allowed_guilds` - Allowlist for guild access control
 - `bot_config` - Key-value store for bot settings
-- `user_preferences` - Per-user settings (for future features)
+- `user_preferences` - Per-user settings
 - `guild_commands` - Enable/disable commands per server
+- `global_commands` - Global command toggles
+- `reminders` - User reminders
+- `warnings` - Moderation warnings
+- `user_todos` - Personal todo lists
+- `user_notes` - Personal notes
+- `afk_status` - AFK statuses
+- `user_economy` - Virtual currency balances
+- `user_levels` - XP and levels per server
+- `user_playlists` - Custom music playlists
+- `birthdays` - User birthdays per server
+- `starboard_messages` - Starred messages
+- `giveaways` - Active giveaways
+- `giveaway_entries` - Giveaway participants
+- `confessions` - Anonymous confessions
 
 ## Admin Panel
 
@@ -202,7 +302,8 @@ python -m http.server 5173
 5. Go to "OAuth2" > "General" and copy the **Client ID**
 6. Enable these **Privileged Gateway Intents** in the Bot section:
    - Message Content Intent
-   - Server Members Intent (optional)
+   - Server Members Intent (required for welcomer, autorole, leveling)
+   - Presence Intent (optional)
 
 ## Inviting the Bot to Your Server
 
@@ -216,7 +317,10 @@ python -m http.server 5173
    - Send Messages
    - Embed Links
    - Use Slash Commands
-   - Read Message History (for /summarize)
+   - Read Message History
+   - Manage Messages (for slowmode/lockdown)
+   - Manage Roles (for autorole)
+   - Add Reactions (for starboard)
 4. Copy the generated URL and open it in your browser
 5. Select your server and authorize the bot
 
@@ -324,6 +428,14 @@ Note: Spotify tracks are played by searching for them on YouTube, so audio quali
 ### "Could not find track" errors
 - Some region-restricted or age-restricted videos may not work
 - Spotify tracks that aren't available on YouTube will fail
+
+### Leveling not working
+- Make sure the Server Members Intent is enabled in Discord Developer Portal
+- Verify the bot has permission to read messages in the channels
+
+### Welcome messages not sending
+- Ensure the Server Members Intent is enabled
+- Check that the bot has permission to send messages in the welcome channel
 
 ## License
 
