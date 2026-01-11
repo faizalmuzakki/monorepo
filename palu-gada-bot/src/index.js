@@ -3,7 +3,22 @@ import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { readdirSync } from 'fs';
 import config, { validateConfig, checkGuildAccess } from './config.js';
-import { addAllowedGuild, isCommandEnabled, getPendingReminders, markReminderCompleted, getAfk, removeAfk } from './database/models.js';
+import {
+    addAllowedGuild,
+    isCommandEnabled,
+    getGuildSettings,
+    addXp,
+    getStarboardMessage,
+    addStarboardMessage,
+    getActiveGiveaways,
+    getGiveaway,
+    getGiveawayEntries,
+    endGiveaway,
+    getPendingReminders,
+    markReminderCompleted,
+    getAfk,
+    removeAfk
+} from './database/models.js';
 import { startApiServer, setDiscordClient } from './api/server.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -29,6 +44,7 @@ const client = new Client({
         GatewayIntentBits.MessageContent,
         GatewayIntentBits.GuildMembers,
         GatewayIntentBits.GuildPresences,
+        GatewayIntentBits.GuildMessageReactions,
     ],
 });
 
@@ -113,9 +129,13 @@ client.once(Events.ClientReady, async (readyClient) => {
         } catch (e) {
             console.error('[ERROR] Reminder checker error:', e);
         }
-    }, 30000); // Check every 30 seconds
+    }, 30000);
 
     console.log('[INFO] Reminder checker started');
+
+    // Start giveaway check interval (every 30 seconds)
+    setInterval(() => checkEndedGiveaways(client), 30000);
+    console.log('[INFO] Giveaway checker started');
 });
 
 // Helper function to format time ago
@@ -131,8 +151,106 @@ function formatTimeAgo(date) {
     return 'just now';
 }
 
-// Handle slash command interactions
+// Helper function to format duration
+function formatDuration(ms) {
+    const seconds = Math.floor(ms / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+
+    const parts = [];
+    if (days > 0) parts.push(`${days}d`);
+    if (hours % 24 > 0) parts.push(`${hours % 24}h`);
+    if (minutes % 60 > 0) parts.push(`${minutes % 60}m`);
+    if (seconds % 60 > 0 && parts.length < 2) parts.push(`${seconds % 60}s`);
+
+    return parts.join(' ') || 'less than a second';
+}
+
+// Check for ended giveaways
+async function checkEndedGiveaways(client) {
+    const guilds = client.guilds.cache;
+
+    for (const [guildId] of guilds) {
+        const giveaways = getActiveGiveaways(guildId);
+
+        for (const giveaway of giveaways) {
+            const endsAt = new Date(giveaway.ends_at);
+
+            if (endsAt <= new Date()) {
+                // Giveaway has ended
+                try {
+                    const entries = getGiveawayEntries(giveaway.message_id);
+                    endGiveaway(giveaway.message_id);
+
+                    const channel = await client.channels.fetch(giveaway.channel_id);
+                    const message = await channel.messages.fetch(giveaway.message_id);
+
+                    if (entries.length === 0) {
+                        const embed = {
+                            color: 0x747F8D,
+                            title: '🎉 GIVEAWAY ENDED 🎉',
+                            description: `**${giveaway.prize}**\n\nNo winners - no one entered!`,
+                            timestamp: new Date().toISOString(),
+                        };
+                        await message.edit({ embeds: [embed], components: [] });
+                    } else {
+                        // Pick winners
+                        const winners = [];
+                        const shuffled = [...entries].sort(() => Math.random() - 0.5);
+                        const winnerCount = Math.min(giveaway.winner_count, shuffled.length);
+
+                        for (let i = 0; i < winnerCount; i++) {
+                            try {
+                                const user = await client.users.fetch(shuffled[i].user_id);
+                                winners.push(user);
+                            } catch {
+                                // User not found
+                            }
+                        }
+
+                        const winnerMentions = winners.map(u => `${u}`).join(', ') || 'Could not determine winners';
+
+                        const embed = {
+                            color: 0x57F287,
+                            title: '🎉 GIVEAWAY ENDED 🎉',
+                            description: `**${giveaway.prize}**\n\n**Winner${winners.length > 1 ? 's' : ''}:** ${winnerMentions}`,
+                            footer: { text: `${entries.length} total entries` },
+                            timestamp: new Date().toISOString(),
+                        };
+
+                        await message.edit({ embeds: [embed], components: [] });
+
+                        if (winners.length > 0) {
+                            await channel.send({
+                                content: `🎉 Congratulations ${winnerMentions}! You won **${giveaway.prize}**!`,
+                            });
+                        }
+                    }
+                } catch (error) {
+                    console.error('[ERROR] Failed to end giveaway:', error);
+                }
+            }
+        }
+    }
+}
+
+// Handle button interactions (giveaways)
 client.on(Events.InteractionCreate, async (interaction) => {
+    if (interaction.isButton()) {
+        if (interaction.customId === 'giveaway_enter') {
+            const giveawayCommand = client.commands.get('giveaway');
+            if (giveawayCommand && giveawayCommand.handleButton) {
+                try {
+                    await giveawayCommand.handleButton(interaction);
+                } catch (error) {
+                    console.error('[ERROR] Giveaway button error:', error);
+                }
+            }
+        }
+        return;
+    }
+
     if (!interaction.isChatInputCommand()) return;
 
     // Check guild access
@@ -176,12 +294,59 @@ client.on(Events.InteractionCreate, async (interaction) => {
     }
 });
 
-// Handle AFK mentions and auto-remove AFK status
+// Handle new member joining (welcomer + autorole)
+client.on(Events.GuildMemberAdd, async (member) => {
+    if (!checkGuildAccess(member.guild.id)) return;
+
+    const settings = getGuildSettings(member.guild.id);
+
+    // Welcome message
+    if (settings.welcome_enabled && settings.welcome_channel_id) {
+        const channel = member.guild.channels.cache.get(settings.welcome_channel_id);
+        if (channel) {
+            const message = (settings.welcome_message || 'Welcome {user} to {server}!')
+                .replace(/{user}/g, `${member}`)
+                .replace(/{username}/g, member.user.username)
+                .replace(/{server}/g, member.guild.name)
+                .replace(/{membercount}/g, member.guild.memberCount.toString());
+
+            try {
+                await channel.send({
+                    embeds: [{
+                        color: 0x57F287,
+                        title: '👋 Welcome!',
+                        description: message,
+                        thumbnail: { url: member.user.displayAvatarURL({ dynamic: true, size: 256 }) },
+                        footer: { text: `Member #${member.guild.memberCount}` },
+                        timestamp: new Date().toISOString(),
+                    }],
+                });
+            } catch (error) {
+                console.error('[ERROR] Failed to send welcome message:', error);
+            }
+        }
+    }
+
+    // Auto role
+    if (settings.autorole_enabled && settings.autorole_id) {
+        const role = member.guild.roles.cache.get(settings.autorole_id);
+        if (role) {
+            try {
+                await member.roles.add(role);
+            } catch (error) {
+                console.error('[ERROR] Failed to add autorole:', error);
+            }
+        }
+    }
+});
+
+// Handle message for XP/leveling and AFK
+const xpCooldowns = new Map();
 client.on(Events.MessageCreate, async (message) => {
     // Ignore bots
     if (message.author.bot) return;
 
-    // Check if the message author is AFK (returning from AFK)
+    // Handle AFK - check if author is returning from AFK
     const authorAfk = getAfk(message.author.id);
     if (authorAfk) {
         // User is back, remove AFK status
@@ -226,23 +391,108 @@ client.on(Events.MessageCreate, async (message) => {
             }
         }
     }
+
+    // XP/Leveling - only for guild messages
+    if (!message.guild) return;
+    if (!checkGuildAccess(message.guild.id)) return;
+
+    // XP cooldown (1 minute per user per guild)
+    const key = `${message.guild.id}-${message.author.id}`;
+    const now = Date.now();
+    const cooldownEnd = xpCooldowns.get(key);
+
+    if (cooldownEnd && now < cooldownEnd) return;
+
+    // Grant XP (15-25 per message)
+    const xpGained = Math.floor(Math.random() * 11) + 15;
+    const result = addXp(message.guild.id, message.author.id, xpGained);
+
+    // Set cooldown
+    xpCooldowns.set(key, now + 60000);
+
+    // Check for level up
+    if (result && result.leveledUp) {
+        // Send level up message
+        try {
+            await message.channel.send({
+                content: `🎉 Congratulations ${message.author}! You've reached **Level ${result.newLevel}**!`,
+            });
+        } catch {
+            // Couldn't send level up message
+        }
+    }
 });
 
-// Helper function to format duration
-function formatDuration(ms) {
-    const seconds = Math.floor(ms / 1000);
-    const minutes = Math.floor(seconds / 60);
-    const hours = Math.floor(minutes / 60);
-    const days = Math.floor(hours / 24);
+// Handle reactions for starboard
+client.on(Events.MessageReactionAdd, async (reaction, user) => {
+    if (user.bot) return;
 
-    const parts = [];
-    if (days > 0) parts.push(`${days}d`);
-    if (hours % 24 > 0) parts.push(`${hours % 24}h`);
-    if (minutes % 60 > 0) parts.push(`${minutes % 60}m`);
-    if (seconds % 60 > 0 && parts.length < 2) parts.push(`${seconds % 60}s`);
+    // Fetch partial reaction
+    if (reaction.partial) {
+        try {
+            await reaction.fetch();
+        } catch {
+            return;
+        }
+    }
 
-    return parts.join(' ') || 'less than a second';
-}
+    if (!reaction.message.guild) return;
+    if (!checkGuildAccess(reaction.message.guild.id)) return;
+
+    // Only handle star reactions
+    if (reaction.emoji.name !== '⭐') return;
+
+    const settings = getGuildSettings(reaction.message.guild.id);
+
+    if (!settings.starboard_enabled || !settings.starboard_channel_id) return;
+
+    const threshold = settings.starboard_threshold || 3;
+    if (reaction.count < threshold) return;
+
+    // Check if already on starboard
+    const existing = getStarboardMessage(reaction.message.guild.id, reaction.message.id);
+    if (existing) return;
+
+    const starboardChannel = reaction.message.guild.channels.cache.get(settings.starboard_channel_id);
+    if (!starboardChannel) return;
+
+    // Don't star messages from the starboard channel
+    if (reaction.message.channel.id === starboardChannel.id) return;
+
+    // Create starboard embed
+    const embed = {
+        color: 0xFFAC33,
+        author: {
+            name: reaction.message.author.tag,
+            icon_url: reaction.message.author.displayAvatarURL({ dynamic: true }),
+        },
+        description: reaction.message.content || '*No text content*',
+        fields: [
+            {
+                name: 'Source',
+                value: `[Jump to message](${reaction.message.url})`,
+                inline: true,
+            },
+        ],
+        footer: {
+            text: `⭐ ${reaction.count} | ${reaction.message.channel.name}`,
+        },
+        timestamp: reaction.message.createdAt.toISOString(),
+    };
+
+    // Add image if present
+    const attachment = reaction.message.attachments.first();
+    if (attachment && attachment.contentType?.startsWith('image/')) {
+        embed.image = { url: attachment.url };
+    }
+
+    try {
+        const starMessage = await starboardChannel.send({ embeds: [embed] });
+        addStarboardMessage(reaction.message.guild.id, reaction.message.id, starMessage.id, reaction.count);
+    } catch (error) {
+        console.error('[ERROR] Failed to post to starboard:', error);
+    }
+});
 
 // Handle bot joining a new guild
 client.on(Events.GuildCreate, (guild) => {

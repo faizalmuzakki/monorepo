@@ -4,14 +4,31 @@ import db from './db.js';
 const statements = {
     getGuildSettings: db.prepare('SELECT * FROM guild_settings WHERE guild_id = ?'),
     upsertGuildSettings: db.prepare(`
-        INSERT INTO guild_settings (guild_id, prefix, dj_role_id, music_channel_id, log_channel_id, volume)
-        VALUES (@guild_id, @prefix, @dj_role_id, @music_channel_id, @log_channel_id, @volume)
+        INSERT INTO guild_settings (guild_id, prefix, dj_role_id, music_channel_id, log_channel_id, volume,
+            welcome_channel_id, welcome_message, welcome_enabled, autorole_id, autorole_enabled,
+            log_enabled, starboard_channel_id, starboard_threshold, starboard_enabled,
+            confession_channel_id, confession_enabled)
+        VALUES (@guild_id, @prefix, @dj_role_id, @music_channel_id, @log_channel_id, @volume,
+            @welcome_channel_id, @welcome_message, @welcome_enabled, @autorole_id, @autorole_enabled,
+            @log_enabled, @starboard_channel_id, @starboard_threshold, @starboard_enabled,
+            @confession_channel_id, @confession_enabled)
         ON CONFLICT(guild_id) DO UPDATE SET
             prefix = @prefix,
             dj_role_id = @dj_role_id,
             music_channel_id = @music_channel_id,
             log_channel_id = @log_channel_id,
             volume = @volume,
+            welcome_channel_id = @welcome_channel_id,
+            welcome_message = @welcome_message,
+            welcome_enabled = @welcome_enabled,
+            autorole_id = @autorole_id,
+            autorole_enabled = @autorole_enabled,
+            log_enabled = @log_enabled,
+            starboard_channel_id = @starboard_channel_id,
+            starboard_threshold = @starboard_threshold,
+            starboard_enabled = @starboard_enabled,
+            confession_channel_id = @confession_channel_id,
+            confession_enabled = @confession_enabled,
             updated_at = CURRENT_TIMESTAMP
     `),
 
@@ -59,22 +76,22 @@ const statements = {
 
     // Reminders
     addReminder: db.prepare('INSERT INTO reminders (user_id, channel_id, guild_id, message, remind_at) VALUES (?, ?, ?, ?, ?)'),
-    getPendingReminders: db.prepare('SELECT * FROM reminders WHERE completed = 0 AND remind_at <= datetime(\'now\')'),
-    getUserReminders: db.prepare('SELECT * FROM reminders WHERE user_id = ? AND completed = 0 ORDER BY remind_at'),
-    completeReminder: db.prepare('UPDATE reminders SET completed = 1 WHERE id = ?'),
+    getPendingReminders: db.prepare("SELECT * FROM reminders WHERE completed = 0 AND remind_at <= datetime('now')"),
+    getUserReminders: db.prepare('SELECT * FROM reminders WHERE user_id = ? AND completed = 0 ORDER BY remind_at ASC'),
+    markReminderCompleted: db.prepare('UPDATE reminders SET completed = 1 WHERE id = ?'),
     deleteReminder: db.prepare('DELETE FROM reminders WHERE id = ? AND user_id = ?'),
 
     // Warnings
     addWarning: db.prepare('INSERT INTO warnings (guild_id, user_id, moderator_id, reason) VALUES (?, ?, ?, ?)'),
-    getWarnings: db.prepare('SELECT * FROM warnings WHERE guild_id = ? AND user_id = ? ORDER BY created_at DESC'),
+    getUserWarnings: db.prepare('SELECT * FROM warnings WHERE guild_id = ? AND user_id = ? ORDER BY created_at DESC'),
     getWarningCount: db.prepare('SELECT COUNT(*) as count FROM warnings WHERE guild_id = ? AND user_id = ?'),
     deleteWarning: db.prepare('DELETE FROM warnings WHERE id = ? AND guild_id = ?'),
-    clearWarnings: db.prepare('DELETE FROM warnings WHERE guild_id = ? AND user_id = ?'),
+    clearUserWarnings: db.prepare('DELETE FROM warnings WHERE guild_id = ? AND user_id = ?'),
 
     // Todos
     addTodo: db.prepare('INSERT INTO user_todos (user_id, task) VALUES (?, ?)'),
-    getUserTodos: db.prepare('SELECT * FROM user_todos WHERE user_id = ? ORDER BY completed, created_at'),
-    completeTodo: db.prepare('UPDATE user_todos SET completed = 1 WHERE id = ? AND user_id = ?'),
+    getUserTodos: db.prepare('SELECT * FROM user_todos WHERE user_id = ? ORDER BY completed ASC, created_at DESC'),
+    toggleTodo: db.prepare('UPDATE user_todos SET completed = ? WHERE id = ? AND user_id = ?'),
     deleteTodo: db.prepare('DELETE FROM user_todos WHERE id = ? AND user_id = ?'),
     clearCompletedTodos: db.prepare('DELETE FROM user_todos WHERE user_id = ? AND completed = 1'),
 
@@ -90,13 +107,78 @@ const statements = {
     getAfk: db.prepare('SELECT * FROM afk_status WHERE user_id = ?'),
     removeAfk: db.prepare('DELETE FROM afk_status WHERE user_id = ?'),
     getAllAfk: db.prepare('SELECT * FROM afk_status'),
+
+    // Economy
+    getEconomy: db.prepare('SELECT * FROM user_economy WHERE user_id = ?'),
+    createEconomy: db.prepare('INSERT OR IGNORE INTO user_economy (user_id) VALUES (?)'),
+    updateBalance: db.prepare('UPDATE user_economy SET balance = balance + ?, total_earned = total_earned + MAX(0, ?) WHERE user_id = ?'),
+    setBalance: db.prepare('UPDATE user_economy SET balance = ? WHERE user_id = ?'),
+    updateBank: db.prepare('UPDATE user_economy SET bank = bank + ? WHERE user_id = ?'),
+    setLastDaily: db.prepare('UPDATE user_economy SET last_daily = CURRENT_TIMESTAMP WHERE user_id = ?'),
+    getTopBalance: db.prepare('SELECT * FROM user_economy ORDER BY (balance + bank) DESC LIMIT ?'),
+
+    // Levels
+    getUserLevel: db.prepare('SELECT * FROM user_levels WHERE guild_id = ? AND user_id = ?'),
+    createUserLevel: db.prepare('INSERT OR IGNORE INTO user_levels (guild_id, user_id) VALUES (?, ?)'),
+    addXp: db.prepare('UPDATE user_levels SET xp = xp + ?, messages = messages + 1, last_xp_gain = CURRENT_TIMESTAMP WHERE guild_id = ? AND user_id = ?'),
+    setLevel: db.prepare('UPDATE user_levels SET level = ? WHERE guild_id = ? AND user_id = ?'),
+    getLeaderboard: db.prepare('SELECT * FROM user_levels WHERE guild_id = ? ORDER BY level DESC, xp DESC LIMIT ?'),
+
+    // Playlists
+    createPlaylist: db.prepare('INSERT INTO user_playlists (user_id, name, tracks) VALUES (?, ?, ?)'),
+    getUserPlaylists: db.prepare('SELECT * FROM user_playlists WHERE user_id = ? ORDER BY updated_at DESC'),
+    getPlaylist: db.prepare('SELECT * FROM user_playlists WHERE user_id = ? AND name = ?'),
+    getPlaylistById: db.prepare('SELECT * FROM user_playlists WHERE id = ? AND user_id = ?'),
+    updatePlaylist: db.prepare('UPDATE user_playlists SET tracks = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?'),
+    deletePlaylist: db.prepare('DELETE FROM user_playlists WHERE id = ? AND user_id = ?'),
+
+    // Birthdays
+    setBirthday: db.prepare('INSERT OR REPLACE INTO birthdays (guild_id, user_id, month, day, year) VALUES (?, ?, ?, ?, ?)'),
+    getBirthday: db.prepare('SELECT * FROM birthdays WHERE user_id = ? AND guild_id = ?'),
+    getTodayBirthdays: db.prepare('SELECT * FROM birthdays WHERE guild_id = ? AND month = ? AND day = ?'),
+    getUpcomingBirthdays: db.prepare('SELECT * FROM birthdays WHERE guild_id = ? ORDER BY month, day LIMIT ?'),
+    deleteBirthday: db.prepare('DELETE FROM birthdays WHERE guild_id = ? AND user_id = ?'),
+
+    // Starboard
+    getStarboardMessage: db.prepare('SELECT * FROM starboard_messages WHERE guild_id = ? AND original_message_id = ?'),
+    addStarboardMessage: db.prepare('INSERT INTO starboard_messages (guild_id, original_message_id, starboard_message_id, star_count) VALUES (?, ?, ?, ?)'),
+    updateStarboardCount: db.prepare('UPDATE starboard_messages SET star_count = ? WHERE guild_id = ? AND original_message_id = ?'),
+
+    // Giveaways
+    createGiveaway: db.prepare('INSERT INTO giveaways (guild_id, channel_id, message_id, prize, winner_count, ends_at, host_id) VALUES (?, ?, ?, ?, ?, ?, ?)'),
+    getGiveaway: db.prepare('SELECT * FROM giveaways WHERE message_id = ?'),
+    getActiveGiveaways: db.prepare('SELECT * FROM giveaways WHERE guild_id = ? AND active = 1'),
+    endGiveaway: db.prepare('UPDATE giveaways SET active = 0 WHERE message_id = ?'),
+    addGiveawayEntry: db.prepare('INSERT OR IGNORE INTO giveaway_entries (message_id, user_id) VALUES (?, ?)'),
+    getGiveawayEntries: db.prepare('SELECT * FROM giveaway_entries WHERE message_id = ?'),
+
+    // Confessions
+    createConfession: db.prepare('INSERT INTO confessions (guild_id, confession_id, user_id, content) VALUES (?, ?, ?, ?)'),
+    getConfession: db.prepare('SELECT * FROM confessions WHERE guild_id = ? AND confession_id = ?'),
+
+    // Audit logs
+    addAuditLog: db.prepare('INSERT INTO audit_logs (guild_id, action, user_id, target_id, details) VALUES (?, ?, ?, ?, ?)'),
+    getAuditLogs: db.prepare('SELECT * FROM audit_logs WHERE guild_id = ? ORDER BY created_at DESC LIMIT ?'),
 };
 
 /**
  * Guild Settings
  */
 export function getGuildSettings(guildId) {
-    return statements.getGuildSettings.get(guildId);
+    const settings = statements.getGuildSettings.get(guildId);
+    return settings || {
+        guild_id: guildId,
+        welcome_enabled: false,
+        welcome_channel_id: null,
+        welcome_message: null,
+        autorole_enabled: false,
+        autorole_id: null,
+        starboard_enabled: false,
+        starboard_channel_id: null,
+        starboard_threshold: 3,
+        confession_enabled: false,
+        confession_channel_id: null,
+    };
 }
 
 export function setGuildSettings(settings) {
@@ -106,8 +188,25 @@ export function setGuildSettings(settings) {
         music_channel_id: null,
         log_channel_id: null,
         volume: 100,
+        welcome_channel_id: null,
+        welcome_message: null,
+        welcome_enabled: 0,
+        autorole_id: null,
+        autorole_enabled: 0,
+        log_enabled: 0,
+        starboard_channel_id: null,
+        starboard_threshold: 3,
+        starboard_enabled: 0,
+        confession_channel_id: null,
+        confession_enabled: 0,
     };
     return statements.upsertGuildSettings.run({ ...defaults, ...settings });
+}
+
+export function updateGuildSettings(guildId, updates) {
+    const current = statements.getGuildSettings.get(guildId) || { guild_id: guildId };
+    const merged = { ...current, ...updates };
+    return setGuildSettings(merged);
 }
 
 /**
@@ -187,7 +286,6 @@ export function isCommandEnabled(guildId, commandName) {
 
     // Then check guild-specific toggle
     const row = statements.getGuildCommand.get(guildId, commandName);
-    // If not in database, default to enabled
     if (!row) return true;
     return row.enabled === 1;
 }
@@ -197,7 +295,7 @@ export function setGuildCommand(guildId, commandName, enabled) {
 }
 
 /**
- * Global Commands (enable/disable globally)
+ * Global Commands
  */
 export function getGlobalCommands() {
     const rows = statements.getGlobalCommands.all();
@@ -210,7 +308,7 @@ export function getGlobalCommands() {
 
 export function isGlobalCommandEnabled(commandName) {
     const row = statements.getGlobalCommand.get(commandName);
-    if (!row) return true; // Default to enabled
+    if (!row) return true;
     return row.enabled === 1;
 }
 
@@ -233,8 +331,8 @@ export function getUserReminders(userId) {
     return statements.getUserReminders.all(userId);
 }
 
-export function completeReminder(id) {
-    return statements.completeReminder.run(id);
+export function markReminderCompleted(id) {
+    return statements.markReminderCompleted.run(id);
 }
 
 export function deleteReminder(id, userId) {
@@ -242,14 +340,14 @@ export function deleteReminder(id, userId) {
 }
 
 /**
- * Warnings (Moderation)
+ * Warnings
  */
 export function addWarning(guildId, userId, moderatorId, reason) {
     return statements.addWarning.run(guildId, userId, moderatorId, reason);
 }
 
-export function getWarnings(guildId, userId) {
-    return statements.getWarnings.all(guildId, userId);
+export function getUserWarnings(guildId, userId) {
+    return statements.getUserWarnings.all(guildId, userId);
 }
 
 export function getWarningCount(guildId, userId) {
@@ -260,8 +358,8 @@ export function deleteWarning(id, guildId) {
     return statements.deleteWarning.run(id, guildId);
 }
 
-export function clearWarnings(guildId, userId) {
-    return statements.clearWarnings.run(guildId, userId);
+export function clearUserWarnings(guildId, userId) {
+    return statements.clearUserWarnings.run(guildId, userId);
 }
 
 /**
@@ -275,8 +373,8 @@ export function getUserTodos(userId) {
     return statements.getUserTodos.all(userId);
 }
 
-export function completeTodo(id, userId) {
-    return statements.completeTodo.run(id, userId);
+export function toggleTodo(id, userId, completed) {
+    return statements.toggleTodo.run(completed ? 1 : 0, id, userId);
 }
 
 export function deleteTodo(id, userId) {
@@ -329,9 +427,227 @@ export function getAllAfk() {
     return statements.getAllAfk.all();
 }
 
+/**
+ * Economy
+ */
+export function getEconomy(userId) {
+    statements.createEconomy.run(userId);
+    return statements.getEconomy.get(userId);
+}
+
+export function addBalance(userId, amount) {
+    statements.createEconomy.run(userId);
+    return statements.updateBalance.run(amount, amount, userId);
+}
+
+export function setBalance(userId, amount) {
+    statements.createEconomy.run(userId);
+    return statements.setBalance.run(amount, userId);
+}
+
+export function addToBank(userId, amount) {
+    statements.createEconomy.run(userId);
+    return statements.updateBank.run(amount, userId);
+}
+
+export function claimDaily(userId, amount) {
+    statements.createEconomy.run(userId);
+    statements.updateBalance.run(amount, amount, userId);
+    return statements.setLastDaily.run(userId);
+}
+
+export function canClaimDaily(userId) {
+    const eco = getEconomy(userId);
+    if (!eco.last_daily) return true;
+    const lastDaily = new Date(eco.last_daily);
+    const now = new Date();
+    return now.getTime() - lastDaily.getTime() >= 24 * 60 * 60 * 1000;
+}
+
+export function getTopBalances(limit = 10) {
+    return statements.getTopBalance.all(limit);
+}
+
+export function transferBalance(fromUserId, toUserId, amount) {
+    const from = getEconomy(fromUserId);
+    if (from.balance < amount) return false;
+
+    statements.updateBalance.run(-amount, 0, fromUserId);
+    statements.createEconomy.run(toUserId);
+    statements.updateBalance.run(amount, 0, toUserId);
+    return true;
+}
+
+/**
+ * Levels
+ */
+export function getUserLevel(guildId, userId) {
+    statements.createUserLevel.run(guildId, userId);
+    return statements.getUserLevel.get(guildId, userId);
+}
+
+export function calculateLevel(xp) {
+    return Math.floor(Math.sqrt(xp / 100));
+}
+
+export function xpForLevel(level) {
+    return level * level * 100;
+}
+
+export function addXp(guildId, userId, amount) {
+    statements.createUserLevel.run(guildId, userId);
+    const before = statements.getUserLevel.get(guildId, userId);
+    const oldLevel = before ? before.level : 0;
+
+    statements.addXp.run(amount, guildId, userId);
+
+    const after = statements.getUserLevel.get(guildId, userId);
+    const newLevel = calculateLevel(after.xp);
+
+    if (newLevel > oldLevel) {
+        statements.setLevel.run(newLevel, guildId, userId);
+        return { leveledUp: true, newLevel };
+    }
+
+    return { leveledUp: false };
+}
+
+export function getLeaderboard(guildId, limit = 10) {
+    return statements.getLeaderboard.all(guildId, limit);
+}
+
+/**
+ * Playlists
+ */
+export function createPlaylist(userId, name, tracks = []) {
+    return statements.createPlaylist.run(userId, name, JSON.stringify(tracks));
+}
+
+export function getUserPlaylists(userId) {
+    return statements.getUserPlaylists.all(userId).map(p => ({
+        ...p,
+        tracks: JSON.parse(p.tracks || '[]'),
+    }));
+}
+
+export function getPlaylist(userId, name) {
+    const playlist = statements.getPlaylist.get(userId, name);
+    if (!playlist) return null;
+    return {
+        ...playlist,
+        tracks: JSON.parse(playlist.tracks || '[]'),
+    };
+}
+
+export function getPlaylistById(id, userId) {
+    const playlist = statements.getPlaylistById.get(id, userId);
+    if (!playlist) return null;
+    return {
+        ...playlist,
+        tracks: JSON.parse(playlist.tracks || '[]'),
+    };
+}
+
+export function updatePlaylistTracks(id, userId, tracks) {
+    return statements.updatePlaylist.run(JSON.stringify(tracks), id, userId);
+}
+
+export function deletePlaylist(id, userId) {
+    return statements.deletePlaylist.run(id, userId);
+}
+
+/**
+ * Birthdays
+ */
+export function setBirthday(userId, guildId, month, day, year = null) {
+    return statements.setBirthday.run(guildId, userId, month, day, year);
+}
+
+export function getBirthday(userId, guildId) {
+    return statements.getBirthday.get(userId, guildId);
+}
+
+export function getTodayBirthdays(guildId) {
+    const now = new Date();
+    return statements.getTodayBirthdays.all(guildId, now.getMonth() + 1, now.getDate());
+}
+
+export function getUpcomingBirthdays(guildId, limit = 10) {
+    return statements.getUpcomingBirthdays.all(guildId, limit);
+}
+
+export function removeBirthday(userId, guildId) {
+    return statements.deleteBirthday.run(guildId, userId);
+}
+
+/**
+ * Starboard
+ */
+export function getStarboardMessage(guildId, originalMessageId) {
+    return statements.getStarboardMessage.get(guildId, originalMessageId);
+}
+
+export function addStarboardMessage(guildId, originalMessageId, starboardMessageId, starCount) {
+    return statements.addStarboardMessage.run(guildId, originalMessageId, starboardMessageId, starCount);
+}
+
+export function updateStarboardCount(guildId, originalMessageId, starCount) {
+    return statements.updateStarboardCount.run(starCount, guildId, originalMessageId);
+}
+
+/**
+ * Giveaways
+ */
+export function createGiveaway(guildId, channelId, messageId, prize, winnerCount, endsAt, hostId) {
+    return statements.createGiveaway.run(guildId, channelId, messageId, prize, winnerCount, endsAt, hostId);
+}
+
+export function getGiveaway(messageId) {
+    return statements.getGiveaway.get(messageId);
+}
+
+export function getActiveGiveaways(guildId) {
+    return statements.getActiveGiveaways.all(guildId);
+}
+
+export function endGiveaway(messageId) {
+    return statements.endGiveaway.run(messageId);
+}
+
+export function addGiveawayEntry(messageId, userId) {
+    return statements.addGiveawayEntry.run(messageId, userId);
+}
+
+export function getGiveawayEntries(messageId) {
+    return statements.getGiveawayEntries.all(messageId);
+}
+
+/**
+ * Confessions
+ */
+export function createConfession(guildId, confessionId, userId, content) {
+    return statements.createConfession.run(guildId, confessionId, userId, content);
+}
+
+export function getConfession(guildId, confessionId) {
+    return statements.getConfession.get(guildId, confessionId);
+}
+
+/**
+ * Audit Logs
+ */
+export function addAuditLog(guildId, action, userId, targetId, details) {
+    return statements.addAuditLog.run(guildId, action, userId, targetId, details);
+}
+
+export function getAuditLogs(guildId, limit = 50) {
+    return statements.getAuditLogs.all(guildId, limit);
+}
+
 export default {
     getGuildSettings,
     setGuildSettings,
+    updateGuildSettings,
     getAllowedGuilds,
     isGuildAllowed,
     addAllowedGuild,
@@ -349,16 +665,16 @@ export default {
     addReminder,
     getPendingReminders,
     getUserReminders,
-    completeReminder,
+    markReminderCompleted,
     deleteReminder,
     addWarning,
-    getWarnings,
+    getUserWarnings,
     getWarningCount,
     deleteWarning,
-    clearWarnings,
+    clearUserWarnings,
     addTodo,
     getUserTodos,
-    completeTodo,
+    toggleTodo,
     deleteTodo,
     clearCompletedTodos,
     addNote,
@@ -370,4 +686,41 @@ export default {
     getAfk,
     removeAfk,
     getAllAfk,
+    getEconomy,
+    addBalance,
+    setBalance,
+    addToBank,
+    claimDaily,
+    canClaimDaily,
+    getTopBalances,
+    transferBalance,
+    getUserLevel,
+    calculateLevel,
+    xpForLevel,
+    addXp,
+    getLeaderboard,
+    createPlaylist,
+    getUserPlaylists,
+    getPlaylist,
+    getPlaylistById,
+    updatePlaylistTracks,
+    deletePlaylist,
+    setBirthday,
+    getBirthday,
+    getTodayBirthdays,
+    getUpcomingBirthdays,
+    removeBirthday,
+    getStarboardMessage,
+    addStarboardMessage,
+    updateStarboardCount,
+    createGiveaway,
+    getGiveaway,
+    getActiveGiveaways,
+    endGiveaway,
+    addGiveawayEntry,
+    getGiveawayEntries,
+    createConfession,
+    getConfession,
+    addAuditLog,
+    getAuditLogs,
 };

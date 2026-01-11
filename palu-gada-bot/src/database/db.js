@@ -29,6 +29,17 @@ function initDatabase() {
             music_channel_id TEXT,
             log_channel_id TEXT,
             volume INTEGER DEFAULT 100,
+            welcome_channel_id TEXT,
+            welcome_message TEXT,
+            welcome_enabled INTEGER DEFAULT 0,
+            autorole_id TEXT,
+            autorole_enabled INTEGER DEFAULT 0,
+            log_enabled INTEGER DEFAULT 0,
+            starboard_channel_id TEXT,
+            starboard_threshold INTEGER DEFAULT 3,
+            starboard_enabled INTEGER DEFAULT 0,
+            confession_channel_id TEXT,
+            confession_enabled INTEGER DEFAULT 0,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
@@ -138,6 +149,124 @@ function initDatabase() {
             user_id TEXT PRIMARY KEY,
             message TEXT,
             since DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    `);
+
+    // User economy table
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS user_economy (
+            user_id TEXT PRIMARY KEY,
+            balance INTEGER DEFAULT 0,
+            bank INTEGER DEFAULT 0,
+            last_daily DATETIME,
+            total_earned INTEGER DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    `);
+
+    // User levels table
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS user_levels (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            guild_id TEXT NOT NULL,
+            user_id TEXT NOT NULL,
+            xp INTEGER DEFAULT 0,
+            level INTEGER DEFAULT 0,
+            messages INTEGER DEFAULT 0,
+            last_xp_gain DATETIME,
+            UNIQUE(guild_id, user_id)
+        )
+    `);
+
+    // User playlists table
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS user_playlists (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id TEXT NOT NULL,
+            name TEXT NOT NULL,
+            tracks TEXT DEFAULT '[]',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(user_id, name)
+        )
+    `);
+
+    // Birthdays table
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS birthdays (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            guild_id TEXT NOT NULL,
+            user_id TEXT NOT NULL,
+            month INTEGER NOT NULL,
+            day INTEGER NOT NULL,
+            year INTEGER,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(guild_id, user_id)
+        )
+    `);
+
+    // Starboard messages table
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS starboard_messages (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            guild_id TEXT NOT NULL,
+            original_message_id TEXT NOT NULL,
+            starboard_message_id TEXT,
+            star_count INTEGER DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(guild_id, original_message_id)
+        )
+    `);
+
+    // Giveaways table
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS giveaways (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            guild_id TEXT NOT NULL,
+            channel_id TEXT NOT NULL,
+            message_id TEXT UNIQUE,
+            host_id TEXT NOT NULL,
+            prize TEXT NOT NULL,
+            winner_count INTEGER DEFAULT 1,
+            ends_at DATETIME NOT NULL,
+            active INTEGER DEFAULT 1,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    `);
+
+    // Giveaway entries table
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS giveaway_entries (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            message_id TEXT NOT NULL,
+            user_id TEXT NOT NULL,
+            entered_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(message_id, user_id)
+        )
+    `);
+
+    // Confessions table
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS confessions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            guild_id TEXT NOT NULL,
+            confession_id TEXT NOT NULL,
+            user_id TEXT NOT NULL,
+            content TEXT NOT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    `);
+
+    // Audit logs table
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS audit_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            guild_id TEXT NOT NULL,
+            action TEXT NOT NULL,
+            user_id TEXT,
+            target_id TEXT,
+            details TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     `);
 
