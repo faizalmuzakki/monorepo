@@ -41,9 +41,9 @@ export default {
 
             const answer = response.content[0].text;
 
-            // Split long responses
-            if (answer.length > 4000) {
-                const chunks = answer.match(/.{1,4000}/gs) || [];
+            // Split long responses - Discord has a 2000 character limit per message
+            if (answer.length > 2000) {
+                const chunks = answer.match(/.{1,2000}/gs) || [];
 
                 await interaction.editReply({
                     embeds: [{
@@ -56,14 +56,14 @@ export default {
                     }],
                 });
 
-                for (let i = 0; i < Math.min(chunks.length, 3); i++) {
+                for (let i = 0; i < Math.min(chunks.length, 5); i++) {
                     await interaction.followUp({
                         content: chunks[i],
                         ephemeral: isPrivate,
                     });
                 }
 
-                if (chunks.length > 3) {
+                if (chunks.length > 5) {
                     await interaction.followUp({
                         content: '*Response truncated due to length...*',
                         ephemeral: isPrivate,
@@ -89,12 +89,18 @@ export default {
                     }],
                 });
 
-                // If answer is longer than 1024 chars, send the rest as a follow-up
+                // If answer is longer than 1024 chars, send the rest as follow-up(s)
+                // Discord's message limit is 2000 characters
                 if (answer.length > 1024) {
-                    await interaction.followUp({
-                        content: answer.slice(1024),
-                        ephemeral: isPrivate,
-                    });
+                    const remaining = answer.slice(1024);
+                    const chunks = remaining.match(/.{1,2000}/gs) || [];
+
+                    for (const chunk of chunks) {
+                        await interaction.followUp({
+                            content: chunk,
+                            ephemeral: isPrivate,
+                        });
+                    }
                 }
             }
         } catch (error) {

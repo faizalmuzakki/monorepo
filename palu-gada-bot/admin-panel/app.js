@@ -88,6 +88,10 @@ async function handleOAuthCallback(code) {
         // Clear URL params
         window.history.replaceState({}, document.title, window.location.pathname);
 
+        // Setup event listeners before showing dashboard
+        // This is needed because the DOMContentLoaded handler returns early for OAuth callbacks
+        setupEventListeners();
+
         showDashboard();
     } catch (error) {
         console.error('OAuth callback failed:', error);
