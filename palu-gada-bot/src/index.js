@@ -195,9 +195,14 @@ async function checkEndedGiveaways(client) {
                         };
                         await message.edit({ embeds: [embed], components: [] });
                     } else {
-                        // Pick winners
+                        // Pick winners using Fisher-Yates shuffle for fair selection
                         const winners = [];
-                        const shuffled = [...entries].sort(() => Math.random() - 0.5);
+                        const shuffled = [...entries];
+                        // Fisher-Yates shuffle for uniform randomness
+                        for (let i = shuffled.length - 1; i > 0; i--) {
+                            const j = Math.floor(Math.random() * (i + 1));
+                            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+                        }
                         const winnerCount = Math.min(giveaway.winner_count, shuffled.length);
 
                         for (let i = 0; i < winnerCount; i++) {

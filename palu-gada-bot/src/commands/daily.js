@@ -16,7 +16,10 @@ export default {
         // Check if user can claim
         if (!canClaimDaily(userId)) {
             const eco = getEconomy(userId);
-            const lastDaily = new Date(eco.last_daily);
+            // SQLite's CURRENT_TIMESTAMP stores UTC time without timezone indicator
+            // Append 'Z' to explicitly parse as UTC (consistent with canClaimDaily in models.js)
+            const lastDailyStr = eco.last_daily.endsWith('Z') ? eco.last_daily : eco.last_daily + 'Z';
+            const lastDaily = new Date(lastDailyStr);
             const nextDaily = new Date(lastDaily.getTime() + 24 * 60 * 60 * 1000);
             const timeLeft = nextDaily.getTime() - Date.now();
 
