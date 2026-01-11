@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, PermissionFlagsBits, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
-import { createGiveaway, getGiveaway, getActiveGiveaways, endGiveaway, addGiveawayEntry, getGiveawayEntries } from '../database/models.js';
+import { createGiveaway, getGiveaway, getActiveGiveaways, getExpiredGiveaways, endGiveaway, addGiveawayEntry, getGiveawayEntries } from '../database/models.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -420,6 +420,38 @@ export async function pickWinners(interaction, giveaway) {
 }
 
 export async function checkGiveaways(client) {
-    // This function should be called periodically to check for ended giveaways
-    // It's exported so it can be called from index.js
+    // Check for expired giveaways and automatically end them
+    // Note: The main giveaway checker runs in index.js via checkEndedGiveaways()
+    // This function provides an alternative entry point for the same functionality
+    try {
+        const expiredGiveaways = getExpiredGiveaways();
+
+        for (const giveaway of expiredGiveaways) {
+            try {
+                console.log(`[INFO] Auto-ending expired giveaway: ${giveaway.prize} (${giveaway.message_id})`);
+
+                // Fetch the channel and create a mock interaction-like object for pickWinners
+                const channel = await client.channels.fetch(giveaway.channel_id);
+                if (!channel) {
+                    console.error(`[ERROR] Could not find channel ${giveaway.channel_id} for giveaway ${giveaway.message_id}`);
+                    endGiveaway(giveaway.message_id); // Mark as ended even if we can't announce
+                    continue;
+                }
+
+                // Create a minimal interaction-like object for pickWinners
+                const mockInteraction = {
+                    client,
+                    editReply: async () => { }, // No-op since this is automated
+                };
+
+                await pickWinners(mockInteraction, giveaway);
+            } catch (error) {
+                console.error(`[ERROR] Failed to auto-end giveaway ${giveaway.message_id}:`, error);
+                // Mark as ended to prevent infinite retry
+                endGiveaway(giveaway.message_id);
+            }
+        }
+    } catch (error) {
+        console.error('[ERROR] Failed to check giveaways:', error);
+    }
 }

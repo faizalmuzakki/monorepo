@@ -68,10 +68,18 @@ export function getDiscordClient() {
 }
 
 export function startApiServer(port = 3000) {
-    return new Promise((resolve) => {
-        app.listen(port, () => {
+    return new Promise((resolve, reject) => {
+        const server = app.listen(port, () => {
             console.log(`[INFO] Admin API server running on port ${port}`);
-            resolve();
+            resolve(server);
+        });
+
+        server.on('error', (err) => {
+            if (err.code === 'EADDRINUSE') {
+                reject(new Error(`Port ${port} is already in use. Please choose a different port or stop the process using it.`));
+            } else {
+                reject(err);
+            }
         });
     });
 }

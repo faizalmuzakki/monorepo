@@ -136,7 +136,7 @@ const statements = {
     setBirthday: db.prepare('INSERT OR REPLACE INTO birthdays (guild_id, user_id, month, day, year) VALUES (?, ?, ?, ?, ?)'),
     getBirthday: db.prepare('SELECT * FROM birthdays WHERE user_id = ? AND guild_id = ?'),
     getTodayBirthdays: db.prepare('SELECT * FROM birthdays WHERE guild_id = ? AND month = ? AND day = ?'),
-    getUpcomingBirthdays: db.prepare('SELECT * FROM birthdays WHERE guild_id = ? ORDER BY month, day LIMIT ?'),
+    // Note: getUpcomingBirthdays now requires dynamic query - see getUpcomingBirthdays function
     deleteBirthday: db.prepare('DELETE FROM birthdays WHERE guild_id = ? AND user_id = ?'),
 
     // Starboard
@@ -148,6 +148,7 @@ const statements = {
     createGiveaway: db.prepare('INSERT INTO giveaways (guild_id, channel_id, message_id, prize, winner_count, ends_at, host_id) VALUES (?, ?, ?, ?, ?, ?, ?)'),
     getGiveaway: db.prepare('SELECT * FROM giveaways WHERE message_id = ?'),
     getActiveGiveaways: db.prepare('SELECT * FROM giveaways WHERE guild_id = ? AND active = 1'),
+    getExpiredGiveaways: db.prepare("SELECT * FROM giveaways WHERE active = 1 AND ends_at <= datetime('now')"),
     endGiveaway: db.prepare('UPDATE giveaways SET active = 0 WHERE message_id = ?'),
     addGiveawayEntry: db.prepare('INSERT OR IGNORE INTO giveaway_entries (message_id, user_id) VALUES (?, ?)'),
     getGiveawayEntries: db.prepare('SELECT * FROM giveaway_entries WHERE message_id = ?'),
@@ -573,7 +574,27 @@ export function getTodayBirthdays(guildId) {
 }
 
 export function getUpcomingBirthdays(guildId, limit = 10) {
-    return statements.getUpcomingBirthdays.all(guildId, limit);
+    const now = new Date();
+    const currentMonth = now.getMonth() + 1; // 1-12
+    const currentDay = now.getDate();
+
+    // Use a dynamic query that calculates days until birthday with year wraparound
+    // Birthdays later this year come first, then birthdays early next year
+    const query = db.prepare(`
+        SELECT *,
+            CASE 
+                WHEN month > ? OR (month = ? AND day >= ?) THEN 
+                    (month - ?) * 31 + (day - ?)
+                ELSE 
+                    (12 - ? + month) * 31 + (day - ?) + 365
+            END as days_until
+        FROM birthdays 
+        WHERE guild_id = ?
+        ORDER BY days_until ASC
+        LIMIT ?
+    `);
+
+    return query.all(currentMonth, currentMonth, currentDay, currentMonth, currentDay, currentMonth, currentDay, guildId, limit);
 }
 
 export function removeBirthday(userId, guildId) {
@@ -608,6 +629,10 @@ export function getGiveaway(messageId) {
 
 export function getActiveGiveaways(guildId) {
     return statements.getActiveGiveaways.all(guildId);
+}
+
+export function getExpiredGiveaways() {
+    return statements.getExpiredGiveaways.all();
 }
 
 export function endGiveaway(messageId) {
@@ -716,6 +741,7 @@ export default {
     createGiveaway,
     getGiveaway,
     getActiveGiveaways,
+    getExpiredGiveaways,
     endGiveaway,
     addGiveawayEntry,
     getGiveawayEntries,

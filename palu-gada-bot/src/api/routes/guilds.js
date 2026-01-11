@@ -7,10 +7,10 @@ import {
     removeAllowedGuild,
     isGuildAllowed,
     getGuildSettings,
-    setGuildSettings,
+    updateGuildSettings,
     getGuildCommands,
     setGuildCommand,
-    getAllGlobalCommands,
+    getGlobalCommands,
     setGlobalCommand,
 } from '../../database/models.js';
 
@@ -111,6 +111,41 @@ router.delete('/allowed/:guildId', (req, res) => {
 });
 
 /**
+ * GET /api/guilds/global/commands
+ * Get all global command settings (owner only)
+ * NOTE: This route MUST be defined before /:guildId to prevent "global" being matched as a guildId
+ */
+router.get('/global/commands', (req, res) => {
+    if (!req.user.isOwner) {
+        return res.status(403).json({ error: 'Owner only' });
+    }
+
+    const globalCommands = getGlobalCommands();
+    res.json({ commands: globalCommands });
+});
+
+/**
+ * PATCH /api/guilds/global/commands/:commandName
+ * Enable/disable a command globally (owner only)
+ * NOTE: This route MUST be defined before /:guildId to prevent "global" being matched as a guildId
+ */
+router.patch('/global/commands/:commandName', (req, res) => {
+    if (!req.user.isOwner) {
+        return res.status(403).json({ error: 'Owner only' });
+    }
+
+    const { commandName } = req.params;
+    const { enabled } = req.body;
+
+    if (typeof enabled !== 'boolean') {
+        return res.status(400).json({ error: 'enabled must be a boolean' });
+    }
+
+    setGlobalCommand(commandName, enabled);
+    res.json({ success: true, command: commandName, enabled });
+});
+
+/**
  * GET /api/guilds/:guildId
  * Get guild details and settings
  */
@@ -146,7 +181,7 @@ router.get('/:guildId', (req, res) => {
 
 /**
  * PATCH /api/guilds/:guildId/settings
- * Update guild settings
+ * Update guild settings (partial update - only provided fields are changed)
  */
 router.patch('/:guildId/settings', (req, res) => {
     const { guildId } = req.params;
@@ -157,13 +192,18 @@ router.patch('/:guildId/settings', (req, res) => {
 
     const { djRoleId, musicChannelId, logChannelId, volume } = req.body;
 
-    setGuildSettings({
-        guild_id: guildId,
-        dj_role_id: djRoleId,
-        music_channel_id: musicChannelId,
-        log_channel_id: logChannelId,
-        volume: volume,
-    });
+    // Build updates object with only defined values to avoid overwriting with NULL
+    const updates = {};
+    if (djRoleId !== undefined) updates.dj_role_id = djRoleId;
+    if (musicChannelId !== undefined) updates.music_channel_id = musicChannelId;
+    if (logChannelId !== undefined) updates.log_channel_id = logChannelId;
+    if (volume !== undefined) updates.volume = volume;
+
+    if (Object.keys(updates).length === 0) {
+        return res.status(400).json({ error: 'No valid settings provided' });
+    }
+
+    updateGuildSettings(guildId, updates);
 
     res.json({ success: true });
 });
@@ -203,37 +243,7 @@ router.patch('/:guildId/commands/:commandName', (req, res) => {
     res.json({ success: true, command: commandName, enabled });
 });
 
-/**
- * GET /api/guilds/global/commands
- * Get all global command settings (owner only)
- */
-router.get('/global/commands', (req, res) => {
-    if (!req.user.isOwner) {
-        return res.status(403).json({ error: 'Owner only' });
-    }
-
-    const globalCommands = getAllGlobalCommands();
-    res.json({ commands: globalCommands });
-});
-
-/**
- * PATCH /api/guilds/global/commands/:commandName
- * Enable/disable a command globally (owner only)
- */
-router.patch('/global/commands/:commandName', (req, res) => {
-    if (!req.user.isOwner) {
-        return res.status(403).json({ error: 'Owner only' });
-    }
-
-    const { commandName } = req.params;
-    const { enabled } = req.body;
-
-    if (typeof enabled !== 'boolean') {
-        return res.status(400).json({ error: 'enabled must be a boolean' });
-    }
-
-    setGlobalCommand(commandName, enabled);
-    res.json({ success: true, command: commandName, enabled });
-});
+// NOTE: /global/commands routes have been moved above /:guildId routes
+// to prevent "global" from being matched as a guildId parameter
 
 export default router;
