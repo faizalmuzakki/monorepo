@@ -269,11 +269,60 @@ The bot includes a web-based admin panel for managing servers and commands.
    ADMIN_PANEL_URL=https://your-admin-panel.pages.dev
    ```
 
-3. **Deploy admin panel to Cloudflare Pages:**
+3. **Deploy admin panel to Cloudflare Pages via Wrangler CLI:**
+
+   First, install Wrangler globally (if not already installed):
+   ```bash
+   npm install -g wrangler
+   ```
+
+   Login to your Cloudflare account:
+   ```bash
+   wrangler login
+   ```
+   This opens a browser window for authentication.
+
+   Navigate to the admin panel directory:
    ```bash
    cd admin-panel
-   # Connect to Cloudflare Pages via dashboard or wrangler
-   # Set the build output directory to: admin-panel
+   ```
+
+   **Option A: First-time deployment (creates new project)**
+   ```bash
+   wrangler pages project create palu-gada-admin
+   ```
+
+   Then deploy:
+   ```bash
+   wrangler pages deploy . --project-name=palu-gada-admin
+   ```
+
+   **Option B: Quick deploy (auto-creates project if needed)**
+   ```bash
+   wrangler pages deploy . --project-name=palu-gada-admin
+   ```
+
+   After deployment, Wrangler will output your URL:
+   ```
+   ✨ Deployment complete! Take a peek over at https://palu-gada-admin.pages.dev
+   ```
+
+   **Updating the deployment:**
+   ```bash
+   # From admin-panel directory, just run deploy again
+   wrangler pages deploy . --project-name=palu-gada-admin
+   ```
+
+   **Useful Wrangler commands:**
+   ```bash
+   # List all your Pages projects
+   wrangler pages project list
+
+   # View deployment history
+   wrangler pages deployment list --project-name=palu-gada-admin
+
+   # Delete a project (careful!)
+   wrangler pages project delete palu-gada-admin
    ```
 
 4. **Update the API URL in the frontend:**
@@ -354,7 +403,12 @@ python -m http.server 5173
    # Edit .env with your credentials
    ```
 
-2. Deploy slash commands (required once):
+2. Create the data directory with proper permissions (required for SQLite database):
+   ```bash
+   mkdir -p data && chmod 777 data
+   ```
+
+3. Deploy slash commands (required once):
    ```bash
    docker compose run --rm palu-gada-bot node src/deploy-commands.js
    ```

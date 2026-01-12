@@ -7,9 +7,18 @@ services:
       - .env
     environment:
       - NODE_ENV=production
-    ports:
-      # Admin API port (for dashboard)
-      - "${API_PORT:-3000}:${API_PORT:-3000}"
+    # Option 1: Direct port exposure (for standalone use)
+    # ports:
+    #   - "${API_PORT:-3000}:${API_PORT:-3000}"
+    # Option 2: Traefik reverse proxy (recommended for production)
+    networks:
+      - traefik-public
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.palu-gada-api.rule=Host(`bot-api.${DOMAIN}`)"
+      - "traefik.http.routers.palu-gada-api.entrypoints=websecure"
+      - "traefik.http.routers.palu-gada-api.tls.certresolver=cloudflare"
+      - "traefik.http.services.palu-gada-api.loadbalancer.server.port=${API_PORT:-3000}"
     volumes:
       # Persist SQLite database
       - ./data:/app/data
@@ -22,3 +31,7 @@ services:
           memory: 512M
         reservations:
           memory: 256M
+
+networks:
+  traefik-public:
+    external: true

@@ -21,6 +21,7 @@ COPY . .
 
 # Create non-root user for security
 RUN useradd -m -s /bin/bash botuser && \
+    mkdir -p /app/data && \
     chown -R botuser:botuser /app
 
 USER botuser
