@@ -8,13 +8,7 @@ const anthropic = new Anthropic({
 export default {
     data: new SlashCommandBuilder()
         .setName('answer')
-        .setDescription('Reply to a question to answer on behalf of someone (or specify a user)')
-        .addUserOption(option =>
-            option
-                .setName('user')
-                .setDescription('The user to answer for (optional if replying to a message)')
-                .setRequired(false)
-        )
+        .setDescription('Reply to a question and let AI answer on your behalf based on conversation context')
         .addIntegerOption(option =>
             option
                 .setName('hours')
@@ -33,19 +27,14 @@ export default {
         }
 
         const hours = interaction.options.getInteger('hours') || 2;
-        let targetUser = interaction.options.getUser('user');
+        const targetUser = interaction.user; // Always answer as the person running the command
         let questionMessage = null;
-
-        // Check if this command was used as a reply
-        const messageReference = interaction.channel.messages.cache.get(
-            interaction.channel.lastMessageId
-        )?.reference;
 
         // Try to get the replied message
         let repliedMessage = null;
         try {
             // Fetch recent messages to find if there's a reply context
-            const recentMessages = await interaction.channel.messages.fetch({ limit: 5 });
+            const recentMessages = await interaction.channel.messages.fetch({ limit: 10 });
             for (const [, msg] of recentMessages) {
                 if (msg.author.id === interaction.user.id && msg.reference) {
                     repliedMessage = await interaction.channel.messages.fetch(msg.reference.messageId);
@@ -61,33 +50,12 @@ export default {
             questionMessage = {
                 content: repliedMessage.content,
                 author: repliedMessage.author,
-                mentions: repliedMessage.mentions.users,
             };
-
-            // If no user specified, try to detect who should answer
-            if (!targetUser) {
-                // Check if the replied message mentions someone
-                const mentionedUsers = repliedMessage.mentions.users.filter(u => !u.bot);
-                if (mentionedUsers.size > 0) {
-                    targetUser = mentionedUsers.first();
-                }
-            }
         }
 
-        // If still no target user, ask for one
-        if (!targetUser) {
-            return interaction.reply({
-                content: 'Please either:\n• Reply to a message that mentions someone and use `/answer`\n• Use `/answer user:@someone` to specify who to answer for',
-                ephemeral: true,
-            });
-        }
-
-        // Don't answer for bots
-        if (targetUser.bot) {
-            return interaction.reply({
-                content: 'I cannot answer on behalf of bots!',
-                ephemeral: true,
-            });
+        // If no replied message, we'll auto-detect from conversation
+        if (!questionMessage) {
+            // That's fine, we'll detect the question from context
         }
 
         await interaction.deferReply();
@@ -146,54 +114,48 @@ export default {
             messages.reverse();
 
             // Format messages for Claude
+            const targetName = targetUser.displayName || targetUser.username;
             const chatLog = messages
                 .map(m => {
                     const isTargetUser = m.authorId === targetUser.id;
-                    const prefix = isTargetUser ? `[${m.author} (THE PERSON TO ANSWER FOR)]` : `[${m.author}]`;
+                    const prefix = isTargetUser ? `[${m.author} (YOU - the person to answer as)]` : `[${m.author}]`;
                     return `${prefix}: ${m.content}`;
                 })
                 .join('\n');
 
             // Build the prompt
             let prompt;
-            const targetName = targetUser.displayName || targetUser.username;
 
             if (questionMessage) {
                 // We have a specific question from the replied message
                 const askerName = questionMessage.author.displayName || questionMessage.author.username;
-                prompt = `You are analyzing a Discord conversation to help answer a question on behalf of someone.
+                prompt = `You are helping ${targetName} answer a question in a Discord chat. You need to respond AS ${targetName}, based on their personality and communication style from the conversation.
 
-The person you need to answer for is: ${targetName}
 The question being asked (by ${askerName}) is: "${questionMessage.content}"
 
-Based on the conversation context below, generate a helpful and natural-sounding answer that ${targetName} might give. Consider:
-- Their communication style from the conversation
-- Any relevant context or information they've shared
-- What they might reasonably know or think based on the discussion
-- The relationship between the asker and ${targetName} based on their interactions
-
-If there's not enough context to answer meaningfully, provide a reasonable generic response they might give.
+Based on the conversation context below, generate a helpful and natural-sounding answer that ${targetName} would give. Consider:
+- ${targetName}'s communication style, tone, and personality from the conversation
+- Any relevant context, opinions, or information ${targetName} has shared
+- How ${targetName} typically responds to similar questions
+- Keep it authentic to how ${targetName} writes
 
 Recent conversation (last ${hours} hour(s)):
 ---
 ${chatLog}
 ---
 
-Generate a natural response as if you were ${targetName} answering the question. Keep it concise and conversational (1-3 sentences typically). Do NOT include any prefix like their name - just the answer itself.`;
+Generate a natural response as ${targetName} would write it. Keep it concise and conversational (1-3 sentences typically). Do NOT include any prefix like their name - just the answer itself. Match their typing style (casual, formal, uses emojis, etc.).`;
             } else {
                 // No specific question, detect from conversation
-                prompt = `You are analyzing a Discord conversation to help answer a question on behalf of someone.
+                prompt = `You are helping ${targetName} respond in a Discord chat. You need to respond AS ${targetName}, based on their personality and communication style from the conversation.
 
-The person you need to answer for is: ${targetName}
+Look at the conversation and identify the most recent thing ${targetName} should respond to - either a direct question to them, something they were mentioned in, or a topic they'd naturally want to chime in on.
 
-First, identify the most recent unanswered question directed at ${targetName} (either by mention or by context of the conversation).
-
-Then, based on the conversation context below, generate a helpful and natural-sounding answer that ${targetName} might give. Consider:
-- Their communication style from the conversation
-- Any relevant context or information they've shared
-- What they might reasonably know or think based on the discussion
-
-If you can't find a clear question directed at them, identify what someone might be waiting for them to respond to.
+Based on the conversation context below, generate a helpful and natural-sounding response that ${targetName} would give. Consider:
+- ${targetName}'s communication style, tone, and personality from the conversation
+- Any relevant context, opinions, or information ${targetName} has shared
+- How ${targetName} typically responds
+- Keep it authentic to how ${targetName} writes
 
 Recent conversation (last ${hours} hour(s)):
 ---
@@ -201,10 +163,10 @@ ${chatLog}
 ---
 
 Respond in this format:
-QUESTION: [The question or topic they should respond to]
-ANSWER: [A natural response as if you were ${targetName}]
+REPLYING TO: [What you're responding to - the question or topic]
+RESPONSE: [A natural response as ${targetName} would write it]
 
-Keep the answer concise and conversational (1-3 sentences typically).`;
+Keep the response concise and conversational (1-3 sentences typically). Match their typing style.`;
             }
 
             // Call Claude API
@@ -226,9 +188,9 @@ Keep the answer concise and conversational (1-3 sentences typically).`;
             let answerText = aiResponse;
 
             if (!questionMessage) {
-                // Try to parse QUESTION: and ANSWER: format
-                const questionMatch = aiResponse.match(/QUESTION:\s*(.+?)(?=\nANSWER:|$)/s);
-                const answerMatch = aiResponse.match(/ANSWER:\s*(.+)/s);
+                // Try to parse REPLYING TO: and RESPONSE: format
+                const questionMatch = aiResponse.match(/REPLYING TO:\s*(.+?)(?=\nRESPONSE:|$)/s);
+                const answerMatch = aiResponse.match(/RESPONSE:\s*(.+)/s);
 
                 if (questionMatch) {
                     questionText = questionMatch[1].trim();
@@ -265,8 +227,7 @@ Keep the answer concise and conversational (1-3 sentences typically).`;
                         },
                     ],
                     footer: {
-                        text: `Requested by ${interaction.user.displayName || interaction.user.username} • AI-generated response`,
-                        icon_url: interaction.user.displayAvatarURL({ dynamic: true }),
+                        text: 'AI-generated response based on your conversation style',
                     },
                     timestamp: new Date().toISOString(),
                 }],
