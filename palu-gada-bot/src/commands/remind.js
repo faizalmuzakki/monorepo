@@ -1,4 +1,5 @@
 import { SlashCommandBuilder, MessageFlags } from 'discord.js';
+import { logCommandError } from '../utils/errorLogger.js';
 import { addReminder, getUserReminders, deleteReminder } from '../database/models.js';
 
 // Parse time string like "1h30m", "2d", "30m", "1w"
@@ -137,7 +138,7 @@ export default {
 
                 await interaction.reply({ embeds: [embed] });
             } catch (error) {
-                console.error('[ERROR] Failed to set reminder:', error);
+                await logCommandError(interaction, error, 'remind');
                 await interaction.reply({
                     content: 'Failed to set reminder. Please try again.',
                     flags: MessageFlags.Ephemeral,

@@ -1,4 +1,5 @@
 import { SlashCommandBuilder, MessageFlags } from 'discord.js';
+import { logCommandError } from '../utils/errorLogger.js';
 import Anthropic from '@anthropic-ai/sdk';
 
 const anthropic = new Anthropic();
@@ -104,7 +105,7 @@ export default {
                 }
             }
         } catch (error) {
-            console.error('[ERROR] Ask command error:', error);
+            await logCommandError(interaction, error, 'ask');
 
             let errorMessage = 'Failed to get a response from Claude AI.';
             if (error.status === 401) {

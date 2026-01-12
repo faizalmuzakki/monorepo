@@ -1,4 +1,5 @@
 import { SlashCommandBuilder } from 'discord.js';
+import { logCommandError } from '../utils/errorLogger.js';
 
 const SUBREDDITS = ['memes', 'dankmemes', 'me_irl', 'wholesomememes', 'ProgrammerHumor'];
 
@@ -88,7 +89,9 @@ export default {
 
             await interaction.editReply({ embeds: [embed] });
         } catch (error) {
-            console.error('[ERROR] Meme command error:', error);
+            // Log error to guild's log channel
+            await logCommandError(interaction, error, 'meme');
+            
             await interaction.editReply({
                 content: 'Failed to fetch meme. Please try again later.',
             });

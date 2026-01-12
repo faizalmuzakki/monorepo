@@ -1,4 +1,5 @@
 import { SlashCommandBuilder, MessageFlags } from 'discord.js';
+import { logCommandError } from '../utils/errorLogger.js';
 
 // Safe math expression evaluator
 function evaluateExpression(expr) {
@@ -104,7 +105,7 @@ export default {
             await interaction.reply({ embeds: [embed] });
 
         } catch (error) {
-            console.error('[ERROR] Math command error:', error);
+            await logCommandError(interaction, error, 'math');
 
             await interaction.reply({
                 embeds: [{

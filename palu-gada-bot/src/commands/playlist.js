@@ -1,4 +1,5 @@
 import { SlashCommandBuilder, MessageFlags } from 'discord.js';
+import { logCommandError } from '../utils/errorLogger.js';
 import {
     createPlaylist,
     getUserPlaylists,
@@ -119,7 +120,7 @@ export default {
                     }],
                 });
             } catch (error) {
-                console.error('[ERROR] Playlist create error:', error);
+                await logCommandError(interaction, error, 'playlist');
                 await interaction.reply({
                     content: 'Failed to create playlist.',
                     flags: MessageFlags.Ephemeral,

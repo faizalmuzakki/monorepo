@@ -1,4 +1,5 @@
 import { SlashCommandBuilder, MessageFlags } from 'discord.js';
+import { logCommandError } from '../utils/errorLogger.js';
 import Anthropic from '@anthropic-ai/sdk';
 
 const anthropic = new Anthropic();
@@ -140,7 +141,7 @@ export default {
                 });
             }
         } catch (error) {
-            console.error('[ERROR] Translate command error:', error);
+            await logCommandError(interaction, error, 'translate');
 
             let errorMessage = 'Failed to translate text.';
             if (error.status === 401) {

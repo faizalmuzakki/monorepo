@@ -1,4 +1,5 @@
 import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
+import { logCommandError } from '../utils/errorLogger.js';
 import Anthropic from '@anthropic-ai/sdk';
 
 const anthropic = new Anthropic({
@@ -162,7 +163,7 @@ Summary:`,
                 }],
             });
         } catch (error) {
-            console.error('[ERROR] Summarize command error:', error);
+            await logCommandError(interaction, error, 'summarize');
 
             let errorMessage = 'Failed to generate summary.';
             if (error.status === 401) {

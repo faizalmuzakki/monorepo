@@ -1,4 +1,5 @@
 import { SlashCommandBuilder, AttachmentBuilder } from 'discord.js';
+import { logCommandError } from '../utils/errorLogger.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -61,7 +62,7 @@ export default {
             });
 
         } catch (error) {
-            console.error('[ERROR] QR code command error:', error);
+            await logCommandError(interaction, error, 'qrcode');
             await interaction.editReply({
                 content: 'Failed to generate QR code. Please try again.',
             });

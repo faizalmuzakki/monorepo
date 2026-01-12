@@ -1,4 +1,5 @@
 import { SlashCommandBuilder, MessageFlags } from 'discord.js';
+import { logCommandError } from '../utils/errorLogger.js';
 
 const NUMBER_EMOJIS = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'];
 
@@ -166,6 +167,7 @@ export default {
                     await updatedMessage.reactions.removeAll().catch(() => {});
                 } catch (error) {
                     console.error('[ERROR] Poll results error:', error);
+                    // Note: Can't use logCommandError here as we don't have interaction context in setTimeout
                 }
             }, duration * 60 * 1000);
         }

@@ -1,4 +1,5 @@
 import { SlashCommandBuilder, PermissionFlagsBits, ChannelType, MessageFlags } from 'discord.js';
+import { logCommandError } from '../utils/errorLogger.js';
 
 const SLOWMODE_PRESETS = {
     off: 0,
@@ -112,7 +113,7 @@ export default {
             await interaction.reply({ embeds: [embed] });
 
         } catch (error) {
-            console.error('[ERROR] Slowmode command error:', error);
+            await logCommandError(interaction, error, 'slowmode');
             await interaction.reply({
                 content: 'Failed to set slowmode. Please check my permissions.',
                 flags: MessageFlags.Ephemeral,

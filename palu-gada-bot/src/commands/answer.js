@@ -1,4 +1,5 @@
 import { SlashCommandBuilder, MessageFlags } from 'discord.js';
+import { logCommandError } from '../utils/errorLogger.js';
 import Anthropic from '@anthropic-ai/sdk';
 
 const anthropic = new Anthropic({
@@ -233,7 +234,7 @@ Keep the response concise and conversational (1-3 sentences typically). Match th
                 }],
             });
         } catch (error) {
-            console.error('[ERROR] Answer command error:', error);
+            await logCommandError(interaction, error, 'answer');
 
             let errorMessage = 'Failed to generate answer.';
             if (error.status === 401) {

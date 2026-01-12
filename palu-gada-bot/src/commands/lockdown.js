@@ -1,4 +1,5 @@
 import { SlashCommandBuilder, PermissionFlagsBits, ChannelType, MessageFlags } from 'discord.js';
+import { logCommandError } from '../utils/errorLogger.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -192,7 +193,7 @@ async function lockChannel(interaction, channel, reason) {
         }
 
     } catch (error) {
-        console.error('[ERROR] Lock channel error:', error);
+        await logCommandError(interaction, error, 'lockdown');
         await interaction.reply({
             content: 'Failed to lock the channel. Please check my permissions.',
             flags: MessageFlags.Ephemeral,
@@ -246,7 +247,7 @@ async function unlockChannel(interaction, channel) {
         }
 
     } catch (error) {
-        console.error('[ERROR] Unlock channel error:', error);
+        await logCommandError(interaction, error, 'lockdown');
         await interaction.reply({
             content: 'Failed to unlock the channel. Please check my permissions.',
             flags: MessageFlags.Ephemeral,

@@ -1,4 +1,5 @@
 import { SlashCommandBuilder } from 'discord.js';
+import { logCommandError } from '../utils/errorLogger.js';
 import { getQueue } from '../utils/musicPlayer.js';
 
 export default {
@@ -158,7 +159,7 @@ export default {
                 });
             }
         } catch (error) {
-            console.error('[ERROR] Lyrics command error:', error);
+            await logCommandError(interaction, error, 'lyrics');
             await interaction.editReply({
                 content: 'Failed to fetch lyrics. Please try again later.',
             });

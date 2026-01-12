@@ -1,4 +1,5 @@
 import { SlashCommandBuilder } from 'discord.js';
+import { logCommandError } from '../utils/errorLogger.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -103,7 +104,7 @@ export default {
             await interaction.editReply({ embeds: [embed] });
 
         } catch (error) {
-            console.error('[ERROR] Define command error:', error);
+            await logCommandError(interaction, error, 'define');
             await interaction.editReply({
                 content: 'Failed to fetch definition. Please try again later.',
             });

@@ -1,4 +1,5 @@
 import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
+import { logCommandError } from '../utils/errorLogger.js';
 import { addWarning, getUserWarnings } from '../database/models.js';
 
 export default {
@@ -141,7 +142,7 @@ export default {
             console.log(`[WARN] ${interaction.user.tag} warned ${user.tag} in ${interaction.guild.name}: ${reason}`);
 
         } catch (error) {
-            console.error('[ERROR] Warn command error:', error);
+            await logCommandError(interaction, error, 'warn');
             await interaction.editReply({
                 content: 'Failed to warn the user. Please try again.',
             });

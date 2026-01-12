@@ -1,4 +1,5 @@
 import { SlashCommandBuilder, PermissionFlagsBits, ChannelType, MessageFlags } from 'discord.js';
+import { logCommandError } from '../utils/errorLogger.js';
 import { getGuildSettings, updateGuildSetting, setGuildSettings } from '../database/models.js';
 
 export default {
@@ -172,6 +173,7 @@ export default {
                     flags: MessageFlags.Ephemeral,
                 });
             } catch (error) {
+                await logCommandError(interaction, error, 'welcomer');
                 await interaction.reply({
                     content: 'Failed to send test message. Check bot permissions.',
                     flags: MessageFlags.Ephemeral,

@@ -1,4 +1,5 @@
 import { SlashCommandBuilder, PermissionFlagsBits, ChannelType, MessageFlags } from 'discord.js';
+import { logCommandError } from '../utils/errorLogger.js';
 import { getGuildSettings, updateGuildSettings, createConfession, getConfession } from '../database/models.js';
 
 export default {
@@ -127,7 +128,7 @@ export default {
                     flags: MessageFlags.Ephemeral,
                 });
             } catch (error) {
-                console.error('[ERROR] Confession send error:', error);
+                await logCommandError(interaction, error, 'confession');
                 await interaction.reply({
                     content: 'Failed to send confession. Please try again later.',
                     flags: MessageFlags.Ephemeral,

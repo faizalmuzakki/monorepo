@@ -1,4 +1,5 @@
 import { SlashCommandBuilder, MessageFlags } from 'discord.js';
+import { logCommandError } from '../utils/errorLogger.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -81,7 +82,7 @@ export default {
             await interaction.editReply({ embeds: [embed] });
 
         } catch (error) {
-            console.error('[ERROR] Shorten command error:', error);
+            await logCommandError(interaction, error, 'shorten');
 
             let errorMessage = 'Failed to shorten URL.';
             if (error.message.includes('blocked')) {

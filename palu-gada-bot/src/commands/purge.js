@@ -1,4 +1,5 @@
 import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
+import { logCommandError } from '../utils/errorLogger.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -93,7 +94,7 @@ export default {
             console.log(`[PURGE] ${interaction.user.tag} deleted ${deleted.size} messages in #${interaction.channel.name} (${interaction.guild.name})`);
 
         } catch (error) {
-            console.error('[ERROR] Purge command error:', error);
+            await logCommandError(interaction, error, 'purge');
             await interaction.editReply({
                 content: 'Failed to delete messages. Make sure the messages are not older than 14 days.',
             });

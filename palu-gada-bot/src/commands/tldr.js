@@ -1,4 +1,5 @@
 import { SlashCommandBuilder, MessageFlags } from 'discord.js';
+import { logCommandError } from '../utils/errorLogger.js';
 import Anthropic from '@anthropic-ai/sdk';
 
 const anthropic = new Anthropic();
@@ -102,7 +103,7 @@ export default {
 
             await interaction.editReply({ embeds: [embed] });
         } catch (error) {
-            console.error('[ERROR] TL;DR command error:', error);
+            await logCommandError(interaction, error, 'tldr');
 
             let errorMessage = 'Failed to generate summary.';
             if (error.status === 401) {

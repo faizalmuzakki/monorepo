@@ -1,4 +1,5 @@
 import { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+import { logCommandError } from '../utils/errorLogger.js';
 
 const JOKE_APIS = {
     programming: 'https://v2.jokeapi.dev/joke/Programming?safe-mode',
@@ -123,7 +124,7 @@ export default {
                 });
             }
         } catch (error) {
-            console.error('[ERROR] Joke command error:', error);
+            await logCommandError(interaction, error, 'joke');
             await interaction.editReply({
                 content: 'Failed to fetch a joke. Please try again later.',
             });

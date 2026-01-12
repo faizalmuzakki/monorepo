@@ -1,4 +1,5 @@
 import { SlashCommandBuilder } from 'discord.js';
+import { logCommandError } from '../utils/errorLogger.js';
 
 const URBAN_API_URL = 'https://api.urbandictionary.com/v0/define';
 
@@ -82,7 +83,7 @@ export default {
                 }],
             });
         } catch (error) {
-            console.error('[ERROR] Urban Dictionary command error:', error);
+            await logCommandError(interaction, error, 'urban');
             await interaction.editReply({
                 content: `Error looking up definition: ${error.message}`,
             });

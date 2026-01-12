@@ -1,4 +1,5 @@
 import { SlashCommandBuilder, MessageFlags } from 'discord.js';
+import { logCommandError } from '../utils/errorLogger.js';
 import Anthropic from '@anthropic-ai/sdk';
 
 const anthropic = new Anthropic();
@@ -92,7 +93,7 @@ export default {
                 });
             }
         } catch (error) {
-            console.error('[ERROR] Explain command error:', error);
+            await logCommandError(interaction, error, 'explain');
 
             let errorMessage = 'Failed to get an explanation from Claude AI.';
             if (error.status === 401) {

@@ -1,4 +1,5 @@
 import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
+import { logCommandError } from '../utils/errorLogger.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -116,7 +117,7 @@ export default {
             console.log(`[KICK] ${interaction.user.tag} kicked ${user.tag} from ${interaction.guild.name}: ${reason}`);
 
         } catch (error) {
-            console.error('[ERROR] Kick command error:', error);
+            await logCommandError(interaction, error, 'kick');
             await interaction.editReply({
                 content: 'Failed to kick the user. Please check my permissions.',
             });

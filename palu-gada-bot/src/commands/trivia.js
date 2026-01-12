@@ -1,4 +1,5 @@
 import { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } from 'discord.js';
+import { logCommandError } from '../utils/errorLogger.js';
 
 const CATEGORIES = {
     general: 9,
@@ -254,7 +255,7 @@ export default {
                 }
             });
         } catch (error) {
-            console.error('[ERROR] Trivia command error:', error);
+            await logCommandError(interaction, error, 'trivia');
             await interaction.editReply({
                 content: 'Failed to fetch trivia question. Please try again later.',
             });

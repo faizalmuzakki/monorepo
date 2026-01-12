@@ -1,4 +1,5 @@
 import { SlashCommandBuilder } from 'discord.js';
+import { logCommandError } from '../utils/errorLogger.js';
 
 const WEATHER_EMOJIS = {
     'Clear': '☀️',
@@ -157,7 +158,7 @@ export default {
             await interaction.editReply({ embeds: [embed] });
 
         } catch (error) {
-            console.error('[ERROR] Weather command error:', error);
+            await logCommandError(interaction, error, 'weather');
 
             await interaction.editReply({
                 content: `Could not find weather for **${location}**. Please check the location name and try again.`,

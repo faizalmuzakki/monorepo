@@ -1,4 +1,5 @@
 import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
+import { logCommandError } from '../utils/errorLogger.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -141,7 +142,7 @@ export default {
             console.log(`[BAN] ${interaction.user.tag} banned ${user.tag} from ${interaction.guild.name}: ${reason}`);
 
         } catch (error) {
-            console.error('[ERROR] Ban command error:', error);
+            await logCommandError(interaction, error, 'ban');
             await interaction.editReply({
                 content: 'Failed to ban the user. Please check my permissions.',
             });

@@ -1,4 +1,5 @@
 import { SlashCommandBuilder, MessageFlags } from 'discord.js';
+import { logCommandError } from '../utils/errorLogger.js';
 import { addTodo, getUserTodos, toggleTodo, deleteTodo, clearCompletedTodos } from '../database/models.js';
 
 export default {
@@ -81,7 +82,7 @@ export default {
                     flags: MessageFlags.Ephemeral,
                 });
             } catch (error) {
-                console.error('[ERROR] Todo add error:', error);
+                await logCommandError(interaction, error, 'todo');
                 await interaction.reply({
                     content: 'Failed to add task. Please try again.',
                     flags: MessageFlags.Ephemeral,

@@ -1,4 +1,5 @@
 import { SlashCommandBuilder, MessageFlags } from 'discord.js';
+import { logCommandError } from '../utils/errorLogger.js';
 import {
     getQueue,
     createQueue,
@@ -119,7 +120,7 @@ export default {
                 });
             }
         } catch (error) {
-            console.error('[ERROR] Play command error:', error);
+            await logCommandError(interaction, error, 'play');
             await interaction.editReply({
                 content: `Error: ${error.message}`,
             });

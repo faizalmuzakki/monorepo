@@ -1,4 +1,5 @@
 import { SlashCommandBuilder, MessageFlags } from 'discord.js';
+import { logCommandError } from '../utils/errorLogger.js';
 import { addNote, getUserNotes, getNote, updateNote, deleteNote } from '../database/models.js';
 
 export default {
@@ -101,7 +102,7 @@ export default {
 
                 await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
             } catch (error) {
-                console.error('[ERROR] Note add error:', error);
+                await logCommandError(interaction, error, 'note');
                 await interaction.reply({
                     content: 'Failed to create note. Please try again.',
                     flags: MessageFlags.Ephemeral,
