@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 
 const NUMBER_EMOJIS = ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟'];
 
@@ -43,14 +43,14 @@ export default {
         if (options && options.length > 10) {
             return interaction.reply({
                 content: 'You can only have up to 10 options in a poll.',
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         }
 
         if (options && options.length === 1) {
             return interaction.reply({
                 content: 'You need at least 2 options for a poll.',
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         }
 

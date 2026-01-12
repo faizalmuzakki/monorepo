@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 import { getQueue } from '../utils/musicPlayer.js';
 
 function parseTime(timeStr) {
@@ -69,7 +69,7 @@ export default {
         if (!queue || queue.songs.length === 0) {
             return interaction.reply({
                 content: 'Nothing is currently playing.',
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         }
 
@@ -78,7 +78,7 @@ export default {
         if (!voiceChannel || voiceChannel.id !== queue.voiceChannel.id) {
             return interaction.reply({
                 content: 'You need to be in the same voice channel as the bot.',
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         }
 
@@ -88,7 +88,7 @@ export default {
         if (position === null) {
             return interaction.reply({
                 content: 'Invalid time format. Use formats like `1:30`, `90`, `1m30s`, or `1h30m`.',
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         }
 
@@ -98,14 +98,14 @@ export default {
         if (position < 0) {
             return interaction.reply({
                 content: 'Position cannot be negative.',
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         }
 
         if (duration && position > duration) {
             return interaction.reply({
                 content: `Position exceeds song duration (${formatTime(duration)}).`,
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         }
 

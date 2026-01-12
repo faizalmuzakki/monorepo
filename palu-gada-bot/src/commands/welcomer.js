@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, PermissionFlagsBits, ChannelType } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, ChannelType, MessageFlags } from 'discord.js';
 import { getGuildSettings, updateGuildSetting, setGuildSettings } from '../database/models.js';
 
 export default {
@@ -58,7 +58,7 @@ export default {
             if (!permissions.has('SendMessages')) {
                 return interaction.reply({
                     content: `I don't have permission to send messages in ${channel}.`,
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -104,7 +104,7 @@ export default {
             if (!settings?.welcome_channel_id) {
                 return interaction.reply({
                     content: 'Please run `/welcomer setup` first to configure the welcome channel.',
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -133,7 +133,7 @@ export default {
             if (!settings?.welcome_channel_id) {
                 return interaction.reply({
                     content: 'Please run `/welcomer setup` first.',
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -141,7 +141,7 @@ export default {
             if (!channel) {
                 return interaction.reply({
                     content: 'The welcome channel no longer exists. Please run `/welcomer setup` again.',
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -169,12 +169,12 @@ export default {
 
                 await interaction.reply({
                     content: `Test welcome message sent to ${channel}!`,
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             } catch (error) {
                 await interaction.reply({
                     content: 'Failed to send test message. Check bot permissions.',
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -188,7 +188,7 @@ export default {
                         title: '📋 Welcomer Status',
                         description: 'Welcomer is not configured. Use `/welcomer setup` to get started.',
                     }],
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -216,7 +216,7 @@ export default {
                         },
                     ],
                 }],
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         }
     },

@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -20,7 +20,7 @@ export default {
         } catch {
             return interaction.reply({
                 content: 'Please provide a valid URL.',
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         }
 

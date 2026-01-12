@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 import {
     getQueue,
     createQueue,
@@ -27,7 +27,7 @@ export default {
         if (!voiceChannel) {
             return interaction.reply({
                 content: 'You need to be in a voice channel to play music!',
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         }
 
@@ -36,7 +36,7 @@ export default {
         if (!permissions.has('Connect') || !permissions.has('Speak')) {
             return interaction.reply({
                 content: 'I need permissions to join and speak in your voice channel!',
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         }
 

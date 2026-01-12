@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
 import { getGuildSettings, updateGuildSetting, setGuildSettings } from '../database/models.js';
 
 export default {
@@ -44,7 +44,7 @@ export default {
             if (role.position >= botMember.roles.highest.position) {
                 return interaction.reply({
                     content: 'I cannot assign this role because it\'s higher than or equal to my highest role.',
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -52,7 +52,7 @@ export default {
             if (role.managed) {
                 return interaction.reply({
                     content: 'This role is managed by an integration and cannot be assigned.',
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -60,7 +60,7 @@ export default {
             if (role.id === interaction.guildId) {
                 return interaction.reply({
                     content: 'You cannot use the @everyone role.',
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -86,7 +86,7 @@ export default {
             if (!settings?.autorole_id) {
                 return interaction.reply({
                     content: 'Please run `/autorole set` first to configure the role.',
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -95,7 +95,7 @@ export default {
             if (!role) {
                 return interaction.reply({
                     content: 'The configured role no longer exists. Please run `/autorole set` again.',
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -128,7 +128,7 @@ export default {
                         title: '📋 Auto-Role Status',
                         description: 'Auto-role is not configured. Use `/autorole set` to get started.',
                     }],
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -151,7 +151,7 @@ export default {
                         },
                     ],
                 }],
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         }
     },

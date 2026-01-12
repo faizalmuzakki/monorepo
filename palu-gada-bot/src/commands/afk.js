@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 import { setAfk, removeAfk, getAfk } from '../database/models.js';
 
 export default {
@@ -23,7 +23,7 @@ export default {
             if (!afkStatus) {
                 return interaction.reply({
                     content: 'You are not currently AFK. Use `/afk <message>` to set your AFK status.',
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -35,7 +35,7 @@ export default {
 
             await interaction.reply({
                 content: `👋 Welcome back! Your AFK status has been removed.\nYou were AFK for **${duration}**.`,
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
 
         } else {

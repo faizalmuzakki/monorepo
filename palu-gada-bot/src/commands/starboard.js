@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, PermissionFlagsBits, ChannelType } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, ChannelType, MessageFlags } from 'discord.js';
 import { getGuildSettings, updateGuildSettings } from '../database/models.js';
 
 export default {
@@ -69,7 +69,7 @@ export default {
             if (!permissions.has('SendMessages') || !permissions.has('EmbedLinks')) {
                 return interaction.reply({
                     content: `I don't have permission to send messages or embeds in ${channel}.`,
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -108,7 +108,7 @@ export default {
             if (!settings.starboard_channel_id) {
                 return interaction.reply({
                     content: 'Starboard is not set up yet! Use `/starboard setup` first.',
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -130,7 +130,7 @@ export default {
             if (!settings.starboard_channel_id) {
                 return interaction.reply({
                     content: 'Starboard is not set up yet! Use `/starboard setup` first.',
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 

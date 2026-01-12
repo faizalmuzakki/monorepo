@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 import { getQueue, clearQueue } from '../utils/musicPlayer.js';
 
 export default {
@@ -12,7 +12,7 @@ export default {
         if (!queue || queue.songs.length === 0) {
             return interaction.reply({
                 content: 'The queue is already empty!',
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         }
 
@@ -20,7 +20,7 @@ export default {
         if (!member.voice.channel || member.voice.channel.id !== queue.voiceChannel.id) {
             return interaction.reply({
                 content: 'You need to be in the same voice channel as the bot!',
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         }
 

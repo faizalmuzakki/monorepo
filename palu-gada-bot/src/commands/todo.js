@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 import { addTodo, getUserTodos, toggleTodo, deleteTodo, clearCompletedTodos } from '../database/models.js';
 
 export default {
@@ -78,13 +78,13 @@ export default {
 
                 await interaction.reply({
                     content: `✅ Task added! (ID: ${result.lastInsertRowid})\n📝 ${task}`,
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             } catch (error) {
                 console.error('[ERROR] Todo add error:', error);
                 await interaction.reply({
                     content: 'Failed to add task. Please try again.',
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -101,7 +101,7 @@ export default {
                     content: showCompleted
                         ? 'Your todo list is empty.'
                         : 'No pending tasks! Use `/todo add` to add a new task.',
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -122,7 +122,7 @@ export default {
                 timestamp: new Date().toISOString(),
             };
 
-            await interaction.reply({ embeds: [embed], ephemeral: true });
+            await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
 
         } else if (subcommand === 'done') {
             const taskId = interaction.options.getInteger('id');
@@ -132,13 +132,13 @@ export default {
             if (result.changes === 0) {
                 return interaction.reply({
                     content: 'Task not found or it doesn\'t belong to you.',
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
             await interaction.reply({
                 content: `✅ Task #${taskId} marked as done!`,
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
 
         } else if (subcommand === 'undone') {
@@ -149,13 +149,13 @@ export default {
             if (result.changes === 0) {
                 return interaction.reply({
                     content: 'Task not found or it doesn\'t belong to you.',
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
             await interaction.reply({
                 content: `⬜ Task #${taskId} marked as not done.`,
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
 
         } else if (subcommand === 'remove') {
@@ -166,13 +166,13 @@ export default {
             if (result.changes === 0) {
                 return interaction.reply({
                     content: 'Task not found or it doesn\'t belong to you.',
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
             await interaction.reply({
                 content: `🗑️ Task #${taskId} removed.`,
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
 
         } else if (subcommand === 'clear') {
@@ -181,13 +181,13 @@ export default {
             if (result.changes === 0) {
                 return interaction.reply({
                     content: 'No completed tasks to clear.',
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
             await interaction.reply({
                 content: `🗑️ Cleared ${result.changes} completed task${result.changes !== 1 ? 's' : ''}.`,
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         }
     },

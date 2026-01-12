@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
 import Anthropic from '@anthropic-ai/sdk';
 
 const anthropic = new Anthropic({
@@ -28,7 +28,7 @@ export default {
         if (!process.env.ANTHROPIC_API_KEY) {
             return interaction.reply({
                 content: 'Anthropic API key is not configured. Please set ANTHROPIC_API_KEY in the environment.',
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         }
 
@@ -39,7 +39,7 @@ export default {
         if (!targetChannel.isTextBased()) {
             return interaction.reply({
                 content: 'I can only summarize text channels!',
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         }
 

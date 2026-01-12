@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 import { getQueue } from '../utils/musicPlayer.js';
 import { updateGuildSetting, getGuildSettings } from '../database/models.js';
 
@@ -45,7 +45,7 @@ export default {
             if (!voiceChannel || voiceChannel.id !== queue.voiceChannel.id) {
                 return interaction.reply({
                     content: 'You need to be in the same voice channel as the bot to change volume.',
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
         }

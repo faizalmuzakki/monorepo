@@ -201,7 +201,21 @@ export function setGuildSettings(settings) {
         confession_channel_id: null,
         confession_enabled: 0,
     };
-    return statements.upsertGuildSettings.run({ ...defaults, ...settings });
+
+    // Merge with defaults
+    const merged = { ...defaults, ...settings };
+
+    // Sanitize values for SQLite (convert booleans to integers)
+    const sanitized = {};
+    for (const [key, value] of Object.entries(merged)) {
+        if (typeof value === 'boolean') {
+            sanitized[key] = value ? 1 : 0;
+        } else {
+            sanitized[key] = value;
+        }
+    }
+
+    return statements.upsertGuildSettings.run(sanitized);
 }
 
 export function updateGuildSettings(guildId, updates) {

@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -35,7 +35,7 @@ export default {
         if (user.id === interaction.user.id) {
             return interaction.reply({
                 content: 'You cannot ban yourself.',
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         }
 
@@ -43,7 +43,7 @@ export default {
         if (user.id === interaction.client.user.id) {
             return interaction.reply({
                 content: 'I cannot ban myself.',
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         }
 
@@ -55,7 +55,7 @@ export default {
             if (!member.bannable) {
                 return interaction.reply({
                     content: 'I cannot ban this user. They may have a higher role than me.',
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -63,7 +63,7 @@ export default {
             if (interaction.member.roles.highest.position <= member.roles.highest.position) {
                 return interaction.reply({
                     content: 'You cannot ban this user as they have an equal or higher role than you.',
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
         }

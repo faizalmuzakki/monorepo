@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 import { addNote, getUserNotes, getNote, updateNote, deleteNote } from '../database/models.js';
 
 export default {
@@ -99,12 +99,12 @@ export default {
                     timestamp: new Date().toISOString(),
                 };
 
-                await interaction.reply({ embeds: [embed], ephemeral: true });
+                await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
             } catch (error) {
                 console.error('[ERROR] Note add error:', error);
                 await interaction.reply({
                     content: 'Failed to create note. Please try again.',
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -114,7 +114,7 @@ export default {
             if (notes.length === 0) {
                 return interaction.reply({
                     content: 'You don\'t have any notes yet. Use `/note add` to create one!',
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -134,7 +134,7 @@ export default {
                 timestamp: new Date().toISOString(),
             };
 
-            await interaction.reply({ embeds: [embed], ephemeral: true });
+            await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
 
         } else if (subcommand === 'view') {
             const noteId = interaction.options.getInteger('id');
@@ -143,7 +143,7 @@ export default {
             if (!note) {
                 return interaction.reply({
                     content: 'Note not found or it doesn\'t belong to you.',
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -172,7 +172,7 @@ export default {
                 timestamp: new Date().toISOString(),
             };
 
-            await interaction.reply({ embeds: [embed], ephemeral: true });
+            await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
 
         } else if (subcommand === 'edit') {
             const noteId = interaction.options.getInteger('id');
@@ -182,7 +182,7 @@ export default {
             if (!newTitle && !newContent) {
                 return interaction.reply({
                     content: 'Please provide a new title or content to update.',
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -191,7 +191,7 @@ export default {
             if (!existingNote) {
                 return interaction.reply({
                     content: 'Note not found or it doesn\'t belong to you.',
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -205,13 +205,13 @@ export default {
             if (result.changes === 0) {
                 return interaction.reply({
                     content: 'Failed to update note.',
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
             await interaction.reply({
                 content: `✅ Note #${noteId} has been updated.`,
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
 
         } else if (subcommand === 'delete') {
@@ -222,13 +222,13 @@ export default {
             if (result.changes === 0) {
                 return interaction.reply({
                     content: 'Note not found or it doesn\'t belong to you.',
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
             await interaction.reply({
                 content: `🗑️ Note #${noteId} has been deleted.`,
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         }
     },

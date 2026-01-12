@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
 import { getUserWarnings, deleteWarning, clearUserWarnings } from '../database/models.js';
 
 export default {
@@ -50,7 +50,7 @@ export default {
             if (warnings.length === 0) {
                 return interaction.reply({
                     content: `${user.tag} has no warnings.`,
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -87,7 +87,7 @@ export default {
             if (result.changes === 0) {
                 return interaction.reply({
                     content: 'Warning not found or it belongs to a different server.',
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -105,7 +105,7 @@ export default {
             if (warnings.length === 0) {
                 return interaction.reply({
                     content: `${user.tag} has no warnings to clear.`,
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 

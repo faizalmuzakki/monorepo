@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, PermissionFlagsBits, ChannelType } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, ChannelType, MessageFlags } from 'discord.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -139,7 +139,7 @@ async function lockChannel(interaction, channel, reason) {
     if (!permissions.has('ManageChannels')) {
         return interaction.reply({
             content: `I don't have permission to manage ${channel}.`,
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
         });
     }
 
@@ -195,7 +195,7 @@ async function lockChannel(interaction, channel, reason) {
         console.error('[ERROR] Lock channel error:', error);
         await interaction.reply({
             content: 'Failed to lock the channel. Please check my permissions.',
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
         });
     }
 }
@@ -206,7 +206,7 @@ async function unlockChannel(interaction, channel) {
     if (!permissions.has('ManageChannels')) {
         return interaction.reply({
             content: `I don't have permission to manage ${channel}.`,
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
         });
     }
 
@@ -249,7 +249,7 @@ async function unlockChannel(interaction, channel) {
         console.error('[ERROR] Unlock channel error:', error);
         await interaction.reply({
             content: 'Failed to unlock the channel. Please check my permissions.',
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
         });
     }
 }

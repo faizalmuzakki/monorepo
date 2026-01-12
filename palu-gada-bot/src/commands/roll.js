@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -21,7 +21,7 @@ export default {
         if (!match) {
             return interaction.reply({
                 content: 'Invalid dice notation! Use format like `d20`, `2d6`, `3d8+5`, or `4d10-2`',
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         }
 
@@ -33,14 +33,14 @@ export default {
         if (numDice < 1 || numDice > 100) {
             return interaction.reply({
                 content: 'Number of dice must be between 1 and 100.',
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         }
 
         if (diceSides < 2 || diceSides > 1000) {
             return interaction.reply({
                 content: 'Dice sides must be between 2 and 1000.',
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         }
 

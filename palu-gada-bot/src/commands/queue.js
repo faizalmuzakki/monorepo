@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 import { getQueue } from '../utils/musicPlayer.js';
 
 export default {
@@ -18,7 +18,7 @@ export default {
         if (!queue || queue.songs.length === 0) {
             return interaction.reply({
                 content: 'The queue is empty!',
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         }
 

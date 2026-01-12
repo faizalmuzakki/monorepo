@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 import { getEconomy, addBalance, addToBank, transferBalance } from '../database/models.js';
 
 export default {
@@ -68,7 +68,7 @@ export default {
             if (user.bot) {
                 return interaction.reply({
                     content: 'Bots don\'t have wallets!',
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -113,7 +113,7 @@ export default {
             if (amount > eco.balance) {
                 return interaction.reply({
                     content: `You don't have enough coins! Your balance: ${eco.balance.toLocaleString()} coins.`,
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -150,7 +150,7 @@ export default {
             if (amount > eco.bank) {
                 return interaction.reply({
                     content: `You don't have enough in your bank! Bank balance: ${eco.bank.toLocaleString()} coins.`,
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -187,14 +187,14 @@ export default {
             if (targetUser.bot) {
                 return interaction.reply({
                     content: 'You can\'t transfer coins to bots!',
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
             if (targetUser.id === interaction.user.id) {
                 return interaction.reply({
                     content: 'You can\'t transfer coins to yourself!',
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -204,7 +204,7 @@ export default {
                 const eco = getEconomy(interaction.user.id);
                 return interaction.reply({
                     content: `You don't have enough coins! Your balance: ${eco.balance.toLocaleString()} coins.`,
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 

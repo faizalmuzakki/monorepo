@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, PermissionFlagsBits, ChannelType } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, ChannelType, MessageFlags } from 'discord.js';
 import { getGuildSettings, updateGuildSetting, setGuildSettings, getAuditLogs } from '../database/models.js';
 
 export default {
@@ -58,7 +58,7 @@ export default {
             if (!permissions.has('SendMessages') || !permissions.has('EmbedLinks')) {
                 return interaction.reply({
                     content: `I need Send Messages and Embed Links permissions in ${channel}.`,
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -87,7 +87,7 @@ export default {
             if (!settings?.log_channel_id) {
                 return interaction.reply({
                     content: 'Please run `/logs setup` first to configure the log channel.',
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -120,7 +120,7 @@ export default {
                         title: '📋 Logging Status',
                         description: 'Logging is not configured. Use `/logs setup` to get started.',
                     }],
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -143,7 +143,7 @@ export default {
                         },
                     ],
                 }],
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
 
         } else if (subcommand === 'view') {
@@ -153,7 +153,7 @@ export default {
             if (logs.length === 0) {
                 return interaction.reply({
                     content: 'No log entries found.',
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -182,7 +182,7 @@ export default {
                 },
             };
 
-            await interaction.reply({ embeds: [embed], ephemeral: true });
+            await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
         }
     },
 };

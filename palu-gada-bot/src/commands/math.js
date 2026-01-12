@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 
 // Safe math expression evaluator
 function evaluateExpression(expr) {
@@ -115,7 +115,7 @@ export default {
                         text: 'Tip: Use standard notation like 2+2, sqrt(16), sin(3.14)',
                     },
                 }],
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         }
     },

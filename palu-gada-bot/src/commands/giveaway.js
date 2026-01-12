@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, PermissionFlagsBits, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } from 'discord.js';
 import { createGiveaway, getGiveaway, getActiveGiveaways, getExpiredGiveaways, endGiveaway, addGiveawayEntry, getGiveawayEntries } from '../database/models.js';
 
 export default {
@@ -73,7 +73,7 @@ export default {
             if (!duration) {
                 return interaction.reply({
                     content: 'Invalid duration format! Use formats like: 30m, 1h, 12h, 1d, 1w',
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -115,14 +115,14 @@ export default {
             if (!giveaway) {
                 return interaction.reply({
                     content: 'Giveaway not found!',
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
             if (!giveaway.active) {
                 return interaction.reply({
                     content: 'This giveaway has already ended!',
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -142,14 +142,14 @@ export default {
             if (!giveaway) {
                 return interaction.reply({
                     content: 'Giveaway not found!',
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
             if (giveaway.active) {
                 return interaction.reply({
                     content: 'This giveaway is still active! End it first.',
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -183,7 +183,7 @@ export default {
             if (giveaways.length === 0) {
                 return interaction.reply({
                     content: 'No active giveaways in this server.',
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -215,7 +215,7 @@ export default {
         if (!giveaway) {
             await interaction.reply({
                 content: 'This giveaway no longer exists!',
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
             return true;
         }
@@ -223,7 +223,7 @@ export default {
         if (!giveaway.active) {
             await interaction.reply({
                 content: 'This giveaway has ended!',
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
             return true;
         }
@@ -235,7 +235,7 @@ export default {
         if (alreadyEntered) {
             await interaction.reply({
                 content: 'You have already entered this giveaway!',
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
             return true;
         }
@@ -269,7 +269,7 @@ export default {
 
         await interaction.followUp({
             content: '🎉 You have entered the giveaway! Good luck!',
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
         });
 
         return true;

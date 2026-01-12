@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, PermissionFlagsBits, ChannelType } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, ChannelType, MessageFlags } from 'discord.js';
 
 const SLOWMODE_PRESETS = {
     off: 0,
@@ -70,7 +70,7 @@ export default {
         if (!permissions.has('ManageChannels')) {
             return interaction.reply({
                 content: `I don't have permission to manage ${channel}.`,
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         }
 
@@ -115,7 +115,7 @@ export default {
             console.error('[ERROR] Slowmode command error:', error);
             await interaction.reply({
                 content: 'Failed to set slowmode. Please check my permissions.',
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         }
     },

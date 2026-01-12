@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, PermissionFlagsBits, ChannelType } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, ChannelType, MessageFlags } from 'discord.js';
 import { getGuildSettings, updateGuildSettings, createConfession, getConfession } from '../database/models.js';
 
 export default {
@@ -55,7 +55,7 @@ export default {
             if (!settings.confession_enabled || !settings.confession_channel_id) {
                 return interaction.reply({
                     content: 'Confessions are not set up in this server!',
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -65,7 +65,7 @@ export default {
             if (!channel) {
                 return interaction.reply({
                     content: 'The confession channel no longer exists!',
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -74,7 +74,7 @@ export default {
             if (!permissions.has('SendMessages') || !permissions.has('EmbedLinks')) {
                 return interaction.reply({
                     content: 'I don\'t have permission to send messages in the confession channel!',
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -124,13 +124,13 @@ export default {
                             text: 'Your identity is hidden, but admins can view it if needed for moderation.',
                         },
                     }],
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             } catch (error) {
                 console.error('[ERROR] Confession send error:', error);
                 await interaction.reply({
                     content: 'Failed to send confession. Please try again later.',
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -139,7 +139,7 @@ export default {
             if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)) {
                 return interaction.reply({
                     content: 'You need the **Manage Server** permission to set up confessions.',
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -150,7 +150,7 @@ export default {
             if (!permissions.has('SendMessages') || !permissions.has('EmbedLinks')) {
                 return interaction.reply({
                     content: `I don't have permission to send messages or embeds in ${channel}.`,
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -182,7 +182,7 @@ export default {
             if (!interaction.member.permissions.has(PermissionFlagsBits.ManageGuild)) {
                 return interaction.reply({
                     content: 'You need the **Manage Server** permission to toggle confessions.',
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -191,7 +191,7 @@ export default {
             if (!settings.confession_channel_id) {
                 return interaction.reply({
                     content: 'Confessions are not set up yet! Use `/confession setup` first.',
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 

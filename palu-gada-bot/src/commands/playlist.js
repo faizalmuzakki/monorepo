@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 import {
     createPlaylist,
     getUserPlaylists,
@@ -104,7 +104,7 @@ export default {
             if (existing) {
                 return interaction.reply({
                     content: `A playlist named **${name}** already exists.`,
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -122,7 +122,7 @@ export default {
                 console.error('[ERROR] Playlist create error:', error);
                 await interaction.reply({
                     content: 'Failed to create playlist.',
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -132,7 +132,7 @@ export default {
             if (playlists.length === 0) {
                 return interaction.reply({
                     content: 'You don\'t have any playlists yet. Use `/playlist create` to create one!',
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -148,7 +148,7 @@ export default {
                 },
             };
 
-            await interaction.reply({ embeds: [embed], ephemeral: true });
+            await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
 
         } else if (subcommand === 'view') {
             const name = interaction.options.getString('name');
@@ -157,7 +157,7 @@ export default {
             if (!playlist) {
                 return interaction.reply({
                     content: `Playlist **${name}** not found.`,
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -168,7 +168,7 @@ export default {
                         title: `🎵 ${playlist.name}`,
                         description: '*No tracks yet*\n\nUse `/playlist add` to add songs!',
                     }],
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -187,7 +187,7 @@ export default {
                 },
             };
 
-            await interaction.reply({ embeds: [embed], ephemeral: true });
+            await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
 
         } else if (subcommand === 'add') {
             const name = interaction.options.getString('name');
@@ -196,7 +196,7 @@ export default {
             if (!playlist) {
                 return interaction.reply({
                     content: `Playlist **${name}** not found.`,
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -204,7 +204,7 @@ export default {
             if (!queue || queue.songs.length === 0) {
                 return interaction.reply({
                     content: 'No song is currently playing to add.',
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -215,7 +215,7 @@ export default {
             if (isDuplicate) {
                 return interaction.reply({
                     content: `**${currentSong.title}** is already in the playlist.`,
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -242,14 +242,14 @@ export default {
             if (!playlist) {
                 return interaction.reply({
                     content: `Playlist **${name}** not found.`,
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
             if (position > playlist.tracks.length) {
                 return interaction.reply({
                     content: `Invalid position. Playlist has ${playlist.tracks.length} track${playlist.tracks.length !== 1 ? 's' : ''}.`,
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -270,7 +270,7 @@ export default {
             if (!playlist) {
                 return interaction.reply({
                     content: `Playlist **${name}** not found.`,
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -291,7 +291,7 @@ export default {
             if (existing) {
                 return interaction.reply({
                     content: `A playlist named **${name}** already exists.`,
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -299,7 +299,7 @@ export default {
             if (!queue || queue.songs.length === 0) {
                 return interaction.reply({
                     content: 'The queue is empty. Nothing to save.',
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 

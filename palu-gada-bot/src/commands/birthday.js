@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
 import { setBirthday, getBirthday, removeBirthday, getUpcomingBirthdays, getTodayBirthdays } from '../database/models.js';
 
 const MONTHS = [
@@ -79,7 +79,7 @@ export default {
             if (day > daysInMonth) {
                 return interaction.reply({
                     content: `Invalid day! ${MONTHS[month - 1].name} only has ${daysInMonth} days.`,
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -107,7 +107,7 @@ export default {
                     content: user.id === interaction.user.id
                         ? 'You haven\'t set your birthday yet! Use `/birthday set` to add it.'
                         : `${user.tag} hasn't set their birthday.`,
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -149,7 +149,7 @@ export default {
             if (!birthday) {
                 return interaction.reply({
                     content: 'You don\'t have a birthday set.',
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -169,7 +169,7 @@ export default {
             if (upcoming.length === 0) {
                 return interaction.reply({
                     content: 'No upcoming birthdays found. Members can use `/birthday set` to add their birthdays!',
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -208,7 +208,7 @@ export default {
             if (birthdays.length === 0) {
                 return interaction.reply({
                     content: 'No birthdays today!',
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 

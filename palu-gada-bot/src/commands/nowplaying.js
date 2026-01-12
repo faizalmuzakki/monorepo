@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 import { getQueue } from '../utils/musicPlayer.js';
 
 export default {
@@ -12,7 +12,7 @@ export default {
         if (!queue || !queue.playing || queue.songs.length === 0) {
             return interaction.reply({
                 content: 'There is no song currently playing!',
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         }
 

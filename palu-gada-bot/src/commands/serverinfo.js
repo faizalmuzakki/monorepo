@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, ChannelType } from 'discord.js';
+import { SlashCommandBuilder, ChannelType, MessageFlags } from 'discord.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -11,7 +11,7 @@ export default {
         if (!guild) {
             return interaction.reply({
                 content: 'This command can only be used in a server.',
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         }
 

@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+import { SlashCommandBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle, MessageFlags } from 'discord.js';
 
 const CATEGORIES = {
     general: 9,
@@ -200,7 +200,7 @@ export default {
                 if (answered.has(i.user.id)) {
                     await i.reply({
                         content: 'You already answered!',
-                        ephemeral: true,
+                        flags: MessageFlags.Ephemeral,
                     });
                     return;
                 }

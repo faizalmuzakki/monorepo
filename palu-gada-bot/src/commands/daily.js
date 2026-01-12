@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 import { getEconomy, canClaimDaily, claimDaily } from '../database/models.js';
 
 const BASE_DAILY = 100;
@@ -35,7 +35,7 @@ export default {
                         text: 'Daily rewards reset every 24 hours',
                     },
                 }],
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         }
 

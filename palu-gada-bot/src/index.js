@@ -1,4 +1,4 @@
-import { Client, Collection, Events, GatewayIntentBits } from 'discord.js';
+import { Client, Collection, Events, GatewayIntentBits, MessageFlags } from 'discord.js';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 import { readdirSync } from 'fs';
@@ -17,7 +17,8 @@ import {
     getPendingReminders,
     markReminderCompleted,
     getAfk,
-    removeAfk
+    removeAfk,
+    addAuditLog
 } from './database/models.js';
 import { startApiServer, setDiscordClient } from './api/server.js';
 
@@ -262,7 +263,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
     if (interaction.guildId && !checkGuildAccess(interaction.guildId)) {
         return interaction.reply({
             content: 'This bot is not authorized to operate in this server.',
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
         });
     }
 
@@ -277,7 +278,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
     if (interaction.guildId && !isCommandEnabled(interaction.guildId, interaction.commandName)) {
         return interaction.reply({
             content: `The \`/${interaction.commandName}\` command is disabled in this server.`,
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
         });
     }
 
@@ -286,15 +287,71 @@ client.on(Events.InteractionCreate, async (interaction) => {
     } catch (error) {
         console.error(`[ERROR] Error executing command ${interaction.commandName}:`, error);
 
+        // Log error to guild's log channel if configured
+        if (interaction.guildId) {
+            try {
+                const settings = getGuildSettings(interaction.guildId);
+                if (settings?.log_enabled && settings?.log_channel_id) {
+                    const logChannel = await client.channels.fetch(settings.log_channel_id).catch(() => null);
+                    if (logChannel) {
+                        await logChannel.send({
+                            embeds: [{
+                                color: 0xED4245, // Red for errors
+                                title: '⚠️ Command Error',
+                                fields: [
+                                    {
+                                        name: 'Command',
+                                        value: `\`/${interaction.commandName}\``,
+                                        inline: true,
+                                    },
+                                    {
+                                        name: 'User',
+                                        value: `${interaction.user.tag} (${interaction.user.id})`,
+                                        inline: true,
+                                    },
+                                    {
+                                        name: 'Channel',
+                                        value: `<#${interaction.channelId}>`,
+                                        inline: true,
+                                    },
+                                    {
+                                        name: 'Error',
+                                        value: `\`\`\`${error.message?.slice(0, 1000) || 'Unknown error'}\`\`\``,
+                                        inline: false,
+                                    },
+                                ],
+                                timestamp: new Date().toISOString(),
+                            }],
+                        }).catch(() => { });
+
+                        // Also add to audit log database
+                        addAuditLog(
+                            interaction.guildId,
+                            'COMMAND_ERROR',
+                            interaction.user.id,
+                            null,
+                            `Command /${interaction.commandName} failed: ${error.message?.slice(0, 500)}`
+                        );
+                    }
+                }
+            } catch (logError) {
+                console.error('[ERROR] Failed to log error to guild channel:', logError);
+            }
+        }
+
         const errorMessage = {
             content: 'There was an error executing this command!',
-            ephemeral: true,
+            flags: MessageFlags.Ephemeral,
         };
 
-        if (interaction.replied || interaction.deferred) {
-            await interaction.followUp(errorMessage);
-        } else {
-            await interaction.reply(errorMessage);
+        try {
+            if (interaction.replied || interaction.deferred) {
+                await interaction.followUp(errorMessage);
+            } else {
+                await interaction.reply(errorMessage);
+            }
+        } catch {
+            // Couldn't respond to interaction
         }
     }
 });

@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 import { getUserLevel, calculateLevel, xpForLevel } from '../database/models.js';
 
 export default {
@@ -18,7 +18,7 @@ export default {
         if (user.bot) {
             return interaction.reply({
                 content: 'Bots don\'t have levels!',
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         }
 

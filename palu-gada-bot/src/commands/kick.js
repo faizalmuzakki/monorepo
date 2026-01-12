@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
 
 export default {
     data: new SlashCommandBuilder()
@@ -28,7 +28,7 @@ export default {
         if (!member) {
             return interaction.reply({
                 content: 'That user is not in this server.',
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         }
 
@@ -36,7 +36,7 @@ export default {
         if (!member.kickable) {
             return interaction.reply({
                 content: 'I cannot kick this user. They may have a higher role than me.',
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         }
 
@@ -44,7 +44,7 @@ export default {
         if (interaction.member.roles.highest.position <= member.roles.highest.position) {
             return interaction.reply({
                 content: 'You cannot kick this user as they have an equal or higher role than you.',
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         }
 
@@ -52,7 +52,7 @@ export default {
         if (user.id === interaction.user.id) {
             return interaction.reply({
                 content: 'You cannot kick yourself.',
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         }
 

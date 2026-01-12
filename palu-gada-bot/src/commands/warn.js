@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, PermissionFlagsBits } from 'discord.js';
+import { SlashCommandBuilder, PermissionFlagsBits, MessageFlags } from 'discord.js';
 import { addWarning, getUserWarnings } from '../database/models.js';
 
 export default {
@@ -29,7 +29,7 @@ export default {
         if (!member) {
             return interaction.reply({
                 content: 'That user is not in this server.',
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         }
 
@@ -37,7 +37,7 @@ export default {
         if (user.bot) {
             return interaction.reply({
                 content: 'You cannot warn bots.',
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         }
 
@@ -45,7 +45,7 @@ export default {
         if (user.id === interaction.user.id) {
             return interaction.reply({
                 content: 'You cannot warn yourself.',
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         }
 
@@ -53,7 +53,7 @@ export default {
         if (interaction.member.roles.highest.position <= member.roles.highest.position) {
             return interaction.reply({
                 content: 'You cannot warn this user as they have an equal or higher role than you.',
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         }
 

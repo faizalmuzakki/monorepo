@@ -1,4 +1,4 @@
-import { SlashCommandBuilder } from 'discord.js';
+import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 import { addReminder, getUserReminders, deleteReminder } from '../database/models.js';
 
 // Parse time string like "1h30m", "2d", "30m", "1w"
@@ -90,7 +90,7 @@ export default {
             if (durationMs === 0) {
                 return interaction.reply({
                     content: 'Invalid time format! Use formats like `1h30m`, `2d`, `30m`, `1w`',
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -98,7 +98,7 @@ export default {
             if (durationMs > 30 * 24 * 60 * 60 * 1000) {
                 return interaction.reply({
                     content: 'Reminders can be set for a maximum of 30 days.',
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -140,7 +140,7 @@ export default {
                 console.error('[ERROR] Failed to set reminder:', error);
                 await interaction.reply({
                     content: 'Failed to set reminder. Please try again.',
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
         } else if (subcommand === 'list') {
@@ -149,7 +149,7 @@ export default {
             if (reminders.length === 0) {
                 return interaction.reply({
                     content: 'You have no pending reminders.',
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -168,7 +168,7 @@ export default {
                 timestamp: new Date().toISOString(),
             };
 
-            await interaction.reply({ embeds: [embed], ephemeral: true });
+            await interaction.reply({ embeds: [embed], flags: MessageFlags.Ephemeral });
         } else if (subcommand === 'cancel') {
             const id = interaction.options.getInteger('id');
 
@@ -177,13 +177,13 @@ export default {
             if (result.changes === 0) {
                 return interaction.reply({
                     content: 'Reminder not found or you don\'t have permission to cancel it.',
-                    ephemeral: true,
+                    flags: MessageFlags.Ephemeral,
                 });
             }
 
             await interaction.reply({
                 content: `✅ Reminder #${id} has been cancelled.`,
-                ephemeral: true,
+                flags: MessageFlags.Ephemeral,
             });
         }
     },
