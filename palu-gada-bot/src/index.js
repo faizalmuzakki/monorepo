@@ -499,6 +499,58 @@ client.on(Events.MessageReactionAdd, async (reaction, user) => {
     }
 });
 
+// Voice channel XP tracking
+// Award XP every 5 minutes to users in voice channels
+const voiceXpInterval = 5 * 60 * 1000; // 5 minutes
+const voiceXpAmount = { min: 5, max: 10 }; // XP range per interval
+
+setInterval(async () => {
+    for (const [guildId, guild] of client.guilds.cache) {
+        if (!checkGuildAccess(guildId)) continue;
+
+        // Get all voice channels with members
+        for (const [, channel] of guild.channels.cache) {
+            if (channel.type !== 2) continue; // 2 = GuildVoice
+
+            // Get non-bot members in the voice channel
+            const members = channel.members.filter(m => !m.user.bot);
+
+            // Require at least 2 people to prevent solo AFK farming
+            if (members.size < 2) continue;
+
+            // Award XP to each member
+            for (const [, member] of members) {
+                // Skip if member is server deafened (likely AFK)
+                if (member.voice.serverDeaf) continue;
+
+                // Award random XP
+                const xpGained = Math.floor(Math.random() * (voiceXpAmount.max - voiceXpAmount.min + 1)) + voiceXpAmount.min;
+                const result = addXp(guildId, member.user.id, xpGained);
+
+                // Check for level up - notify in a text channel if possible
+                if (result && result.leveledUp) {
+                    // Try to find a general/chat channel to announce
+                    const textChannel = guild.channels.cache.find(
+                        c => c.type === 0 && c.permissionsFor(guild.members.me)?.has('SendMessages')
+                    );
+
+                    if (textChannel) {
+                        try {
+                            await textChannel.send({
+                                content: `🎉 ${member.user} leveled up to **Level ${result.newLevel}** while vibing in voice!`,
+                            });
+                        } catch {
+                            // Couldn't send
+                        }
+                    }
+                }
+            }
+        }
+    }
+}, voiceXpInterval);
+
+console.log('[INFO] Voice XP tracker initialized (awards XP every 5 minutes)');
+
 // Handle bot joining a new guild
 client.on(Events.GuildCreate, (guild) => {
     console.log(`[INFO] Joined new guild: ${guild.name} (${guild.id})`);

@@ -43,6 +43,8 @@ A multi-purpose Discord bot - "apa lu mau, gua ada" (whatever you need, I got it
 
 ### Economy & Leveling
 - XP-based leveling system
+- Earn XP from messages (15-25 XP per message, 1 min cooldown)
+- Earn XP from voice channels (5-10 XP per 5 minutes, requires 2+ people)
 - Server leaderboards
 - Virtual currency (wallet/bank)
 - Daily rewards
