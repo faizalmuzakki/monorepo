@@ -210,6 +210,11 @@ export function updateGuildSettings(guildId, updates) {
     return setGuildSettings(merged);
 }
 
+// Update a single guild setting
+export function updateGuildSetting(guildId, key, value) {
+    return updateGuildSettings(guildId, { [key]: value });
+}
+
 /**
  * Allowed Guilds (Whitelist)
  */
@@ -676,6 +681,7 @@ export default {
     getGuildSettings,
     setGuildSettings,
     updateGuildSettings,
+    updateGuildSetting,
     getAllowedGuilds,
     isGuildAllowed,
     addAllowedGuild,
