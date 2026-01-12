@@ -8,12 +8,12 @@ const anthropic = new Anthropic({
 export default {
     data: new SlashCommandBuilder()
         .setName('answer')
-        .setDescription('Answer a question on behalf of someone based on conversation context')
+        .setDescription('Reply to a question to answer on behalf of someone (or specify a user)')
         .addUserOption(option =>
             option
                 .setName('user')
-                .setDescription('The user to answer on behalf of')
-                .setRequired(true)
+                .setDescription('The user to answer for (optional if replying to a message)')
+                .setRequired(false)
         )
         .addIntegerOption(option =>
             option
@@ -21,12 +21,6 @@ export default {
                 .setDescription('Hours of conversation to analyze (default: 2, max: 6)')
                 .setMinValue(1)
                 .setMaxValue(6)
-        )
-        .addStringOption(option =>
-            option
-                .setName('question')
-                .setDescription('Specific question to answer (optional - auto-detects if not provided)')
-                .setMaxLength(500)
         ),
 
     async execute(interaction) {
@@ -38,9 +32,55 @@ export default {
             });
         }
 
-        const targetUser = interaction.options.getUser('user');
         const hours = interaction.options.getInteger('hours') || 2;
-        const specificQuestion = interaction.options.getString('question');
+        let targetUser = interaction.options.getUser('user');
+        let questionMessage = null;
+
+        // Check if this command was used as a reply
+        const messageReference = interaction.channel.messages.cache.get(
+            interaction.channel.lastMessageId
+        )?.reference;
+
+        // Try to get the replied message
+        let repliedMessage = null;
+        try {
+            // Fetch recent messages to find if there's a reply context
+            const recentMessages = await interaction.channel.messages.fetch({ limit: 5 });
+            for (const [, msg] of recentMessages) {
+                if (msg.author.id === interaction.user.id && msg.reference) {
+                    repliedMessage = await interaction.channel.messages.fetch(msg.reference.messageId);
+                    break;
+                }
+            }
+        } catch (e) {
+            // No reply found
+        }
+
+        // If we have a replied message, use it as the question
+        if (repliedMessage) {
+            questionMessage = {
+                content: repliedMessage.content,
+                author: repliedMessage.author,
+                mentions: repliedMessage.mentions.users,
+            };
+
+            // If no user specified, try to detect who should answer
+            if (!targetUser) {
+                // Check if the replied message mentions someone
+                const mentionedUsers = repliedMessage.mentions.users.filter(u => !u.bot);
+                if (mentionedUsers.size > 0) {
+                    targetUser = mentionedUsers.first();
+                }
+            }
+        }
+
+        // If still no target user, ask for one
+        if (!targetUser) {
+            return interaction.reply({
+                content: 'Please either:\n• Reply to a message that mentions someone and use `/answer`\n• Use `/answer user:@someone` to specify who to answer for',
+                ephemeral: true,
+            });
+        }
 
         // Don't answer for bots
         if (targetUser.bot) {
@@ -116,33 +156,39 @@ export default {
 
             // Build the prompt
             let prompt;
-            if (specificQuestion) {
+            const targetName = targetUser.displayName || targetUser.username;
+
+            if (questionMessage) {
+                // We have a specific question from the replied message
+                const askerName = questionMessage.author.displayName || questionMessage.author.username;
                 prompt = `You are analyzing a Discord conversation to help answer a question on behalf of someone.
 
-The person you need to answer for is: ${targetUser.displayName || targetUser.username}
-The specific question to answer is: "${specificQuestion}"
+The person you need to answer for is: ${targetName}
+The question being asked (by ${askerName}) is: "${questionMessage.content}"
 
-Based on the conversation context below, generate a helpful and natural-sounding answer that ${targetUser.displayName || targetUser.username} might give. Consider:
+Based on the conversation context below, generate a helpful and natural-sounding answer that ${targetName} might give. Consider:
 - Their communication style from the conversation
 - Any relevant context or information they've shared
 - What they might reasonably know or think based on the discussion
+- The relationship between the asker and ${targetName} based on their interactions
 
-If there's not enough context to answer meaningfully, say so.
+If there's not enough context to answer meaningfully, provide a reasonable generic response they might give.
 
 Recent conversation (last ${hours} hour(s)):
 ---
 ${chatLog}
 ---
 
-Generate a natural response as if you were ${targetUser.displayName || targetUser.username} answering the question. Keep it concise and conversational. Do NOT include any prefix like their name - just the answer itself.`;
+Generate a natural response as if you were ${targetName} answering the question. Keep it concise and conversational (1-3 sentences typically). Do NOT include any prefix like their name - just the answer itself.`;
             } else {
+                // No specific question, detect from conversation
                 prompt = `You are analyzing a Discord conversation to help answer a question on behalf of someone.
 
-The person you need to answer for is: ${targetUser.displayName || targetUser.username}
+The person you need to answer for is: ${targetName}
 
-First, identify the most recent unanswered question directed at ${targetUser.displayName || targetUser.username} (either by mention or by context of the conversation).
+First, identify the most recent unanswered question directed at ${targetName} (either by mention or by context of the conversation).
 
-Then, based on the conversation context below, generate a helpful and natural-sounding answer that ${targetUser.displayName || targetUser.username} might give. Consider:
+Then, based on the conversation context below, generate a helpful and natural-sounding answer that ${targetName} might give. Consider:
 - Their communication style from the conversation
 - Any relevant context or information they've shared
 - What they might reasonably know or think based on the discussion
@@ -156,9 +202,9 @@ ${chatLog}
 
 Respond in this format:
 QUESTION: [The question or topic they should respond to]
-ANSWER: [A natural response as if you were ${targetUser.displayName || targetUser.username}]
+ANSWER: [A natural response as if you were ${targetName}]
 
-Keep the answer concise and conversational.`;
+Keep the answer concise and conversational (1-3 sentences typically).`;
             }
 
             // Call Claude API
@@ -176,10 +222,10 @@ Keep the answer concise and conversational.`;
             const aiResponse = response.content[0].text;
 
             // Parse the response
-            let questionText = specificQuestion || 'Auto-detected from conversation';
+            let questionText = questionMessage?.content || 'Auto-detected from conversation';
             let answerText = aiResponse;
 
-            if (!specificQuestion) {
+            if (!questionMessage) {
                 // Try to parse QUESTION: and ANSWER: format
                 const questionMatch = aiResponse.match(/QUESTION:\s*(.+?)(?=\nANSWER:|$)/s);
                 const answerMatch = aiResponse.match(/ANSWER:\s*(.+)/s);
@@ -192,19 +238,24 @@ Keep the answer concise and conversational.`;
                 }
             }
 
+            // Truncate question text if too long
+            const displayQuestion = questionText.length > 200
+                ? questionText.substring(0, 197) + '...'
+                : questionText;
+
             // Send the answer
             await interaction.editReply({
                 embeds: [{
                     color: 0x5865F2,
                     author: {
-                        name: `${targetUser.displayName || targetUser.username} might say...`,
+                        name: `${targetName} might say...`,
                         icon_url: targetUser.displayAvatarURL({ dynamic: true }),
                     },
                     description: answerText,
                     fields: [
                         {
                             name: 'Responding to',
-                            value: questionText.length > 200 ? questionText.substring(0, 197) + '...' : questionText,
+                            value: displayQuestion,
                             inline: false,
                         },
                         {
