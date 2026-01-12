@@ -1,5 +1,5 @@
 // Configuration - Update this with your API URL
-const API_URL = localStorage.getItem('apiUrl') || 'http://localhost:3000';
+const API_URL = localStorage.getItem('apiUrl') || 'https://palu-gada.solork.dev';
 
 // State
 let token = localStorage.getItem('token');
