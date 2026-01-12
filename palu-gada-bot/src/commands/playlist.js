@@ -7,7 +7,7 @@ import {
     updatePlaylistTracks,
     deletePlaylist,
 } from '../database/models.js';
-import { getQueue } from './play.js';
+import { getQueue } from '../utils/musicPlayer.js';
 
 export default {
     data: new SlashCommandBuilder()

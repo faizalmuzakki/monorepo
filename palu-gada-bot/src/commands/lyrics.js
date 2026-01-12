@@ -1,5 +1,5 @@
 import { SlashCommandBuilder } from 'discord.js';
-import { getQueue } from './play.js';
+import { getQueue } from '../utils/musicPlayer.js';
 
 export default {
     data: new SlashCommandBuilder()

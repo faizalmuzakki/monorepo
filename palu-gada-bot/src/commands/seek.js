@@ -1,5 +1,5 @@
 import { SlashCommandBuilder } from 'discord.js';
-import { getQueue } from './play.js';
+import { getQueue } from '../utils/musicPlayer.js';
 
 function parseTime(timeStr) {
     // Parse formats: "1:30", "90", "1:30:00", "1h30m", "90s"
