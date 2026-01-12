@@ -80,6 +80,7 @@ A multi-purpose Discord bot - "apa lu mau, gua ada" (whatever you need, I got it
 |---------|-------------|
 | `/urban <term>` | Look up a word on Urban Dictionary |
 | `/summarize [hours] [channel]` | Summarize chat history using Claude AI |
+| `/answer [hours]` | Reply to a question, AI answers on your behalf based on your conversation style |
 | `/weather <location>` | Get weather information for a location |
 | `/qrcode <text>` | Generate a QR code |
 | `/shorten <url>` | Shorten a URL using is.gd |
