@@ -72,6 +72,23 @@ export default {
                         .setRequired(false)
                 )
         )
+        .addSubcommand(subcommand =>
+            subcommand
+                .setName('remove')
+                .setDescription('Bulk remove webhooks from repos')
+                .addStringOption(option =>
+                    option
+                        .setName('token')
+                        .setDescription('GitHub Personal Access Token (with admin:repo_hook scope)')
+                        .setRequired(true)
+                )
+                .addStringOption(option =>
+                    option
+                        .setName('organization')
+                        .setDescription('GitHub organization name (optional, removes from all your repos if not specified)')
+                        .setRequired(false)
+                )
+        )
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
 
     async execute(interaction) {
@@ -82,6 +99,10 @@ export default {
 
         if (subcommand === 'verify') {
             return this.handleVerify(interaction);
+        }
+
+        if (subcommand === 'remove') {
+            return this.handleRemove(interaction);
         }
 
         const channel = interaction.options.getChannel('channel');
@@ -434,6 +455,175 @@ export default {
             console.error('[ERROR] Webhook verification failed:', error);
             await interaction.editReply({
                 content: `Failed to verify webhooks: ${error.message}`,
+            });
+        }
+    },
+
+    async handleRemove(interaction) {
+        const token = interaction.options.getString('token');
+        const organization = interaction.options.getString('organization');
+        const webhookUrl = `${process.env.PUBLIC_URL || 'http://localhost:3000'}/api/github/webhook`;
+
+        try {
+            let repos = [];
+
+            if (organization) {
+                // Fetch organization repos
+                const response = await fetch(`https://api.github.com/orgs/${organization}/repos?per_page=100`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Accept': 'application/vnd.github.v3+json',
+                        'User-Agent': 'Discord-Bot',
+                    },
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    return interaction.editReply({
+                        content: `Failed to fetch organization repos: ${error.message || response.statusText}`,
+                    });
+                }
+
+                repos = await response.json();
+            } else {
+                // Fetch all user repos
+                let page = 1;
+                let allRepos = [];
+                
+                while (true) {
+                    const response = await fetch(`https://api.github.com/user/repos?per_page=100&page=${page}&type=all`, {
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Accept': 'application/vnd.github.v3+json',
+                            'User-Agent': 'Discord-Bot',
+                        },
+                    });
+
+                    if (!response.ok) {
+                        const error = await response.json();
+                        return interaction.editReply({
+                            content: `Failed to fetch your repos: ${error.message || response.statusText}`,
+                        });
+                    }
+
+                    const pageRepos = await response.json();
+                    if (pageRepos.length === 0) break;
+                    
+                    allRepos = allRepos.concat(pageRepos);
+                    
+                    if (pageRepos.length < 100) break;
+                    page++;
+                }
+
+                repos = allRepos;
+            }
+
+            if (repos.length === 0) {
+                return interaction.editReply({
+                    content: 'No repositories found.',
+                });
+            }
+
+            // Remove webhooks from each repo
+            const results = {
+                removed: [],
+                notFound: [],
+                errors: [],
+            };
+
+            for (const repo of repos) {
+                try {
+                    // Get all hooks for the repo
+                    const response = await fetch(`https://api.github.com/repos/${repo.full_name}/hooks`, {
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Accept': 'application/vnd.github.v3+json',
+                            'User-Agent': 'Discord-Bot',
+                        },
+                    });
+
+                    if (!response.ok) {
+                        const error = await response.json();
+                        results.errors.push(`${repo.name}: ${error.message}`);
+                        continue;
+                    }
+
+                    const hooks = await response.json();
+                    const ourHook = hooks.find(hook => hook.config?.url === webhookUrl);
+                    
+                    if (!ourHook) {
+                        results.notFound.push(repo.name);
+                        continue;
+                    }
+
+                    // Delete the webhook
+                    const deleteResponse = await fetch(`https://api.github.com/repos/${repo.full_name}/hooks/${ourHook.id}`, {
+                        method: 'DELETE',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Accept': 'application/vnd.github.v3+json',
+                            'User-Agent': 'Discord-Bot',
+                        },
+                    });
+
+                    if (deleteResponse.ok || deleteResponse.status === 204) {
+                        results.removed.push(repo.name);
+                    } else {
+                        const error = await deleteResponse.json();
+                        results.errors.push(`${repo.name}: ${error.message}`);
+                    }
+                } catch (error) {
+                    results.errors.push(`${repo.name}: ${error.message}`);
+                }
+            }
+
+            // Build response
+            const embed = {
+                color: results.removed.length > 0 ? 0x57F287 : 0xFEE75C,
+                title: '🗑️ Bulk GitHub Webhook Removal',
+                description: `Processed ${repos.length} repositories${organization ? ` in **${organization}**` : ''}`,
+                fields: [],
+                timestamp: new Date().toISOString(),
+            };
+
+            if (results.removed.length > 0) {
+                const list = results.removed.slice(0, 20).join(', ');
+                const more = results.removed.length > 20 ? `\n...and ${results.removed.length - 20} more` : '';
+                embed.fields.push({
+                    name: `✅ Removed (${results.removed.length})`,
+                    value: list + more,
+                    inline: false,
+                });
+            }
+
+            if (results.notFound.length > 0) {
+                const list = results.notFound.slice(0, 20).join(', ');
+                const more = results.notFound.length > 20 ? `\n...and ${results.notFound.length - 20} more` : '';
+                embed.fields.push({
+                    name: `⏭️ No Webhook Found (${results.notFound.length})`,
+                    value: list + more,
+                    inline: false,
+                });
+            }
+
+            if (results.errors.length > 0) {
+                embed.fields.push({
+                    name: `❌ Errors (${results.errors.length})`,
+                    value: results.errors.slice(0, 3).join('\n').slice(0, 1024),
+                    inline: false,
+                });
+            }
+
+            if (results.removed.length === 0 && results.errors.length === 0) {
+                embed.description += '\n\n✨ No webhooks found to remove!';
+            }
+
+            await interaction.editReply({ embeds: [embed] });
+
+        } catch (error) {
+            console.error('[ERROR] Webhook removal failed:', error);
+            await interaction.editReply({
+                content: `Failed to remove webhooks: ${error.message}`,
             });
         }
     },
