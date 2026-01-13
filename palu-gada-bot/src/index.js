@@ -485,6 +485,170 @@ client.on(Events.MessageCreate, async (message) => {
     }
 });
 
+// Handle message edits (like Dyno's message edit logging)
+client.on(Events.MessageUpdate, async (oldMessage, newMessage) => {
+    // Ignore bots
+    if (newMessage.author?.bot) return;
+    
+    // Ignore DMs
+    if (!newMessage.guild) return;
+    
+    // Check guild access
+    if (!checkGuildAccess(newMessage.guild.id)) return;
+    
+    // Fetch partial messages if needed
+    if (oldMessage.partial) {
+        try {
+            await oldMessage.fetch();
+        } catch {
+            return; // Can't fetch old message
+        }
+    }
+    
+    if (newMessage.partial) {
+        try {
+            await newMessage.fetch();
+        } catch {
+            return;
+        }
+    }
+    
+    // Ignore if content didn't change (could be embed update, pin, etc.)
+    if (oldMessage.content === newMessage.content) return;
+    
+    // Check if message edit logging is enabled
+    const settings = getGuildSettings(newMessage.guild.id);
+    if (!settings?.log_enabled || !settings?.message_edit_log_enabled || !settings?.log_channel_id) return;
+    
+    const logChannel = newMessage.guild.channels.cache.get(settings.log_channel_id);
+    if (!logChannel) return;
+    
+    // Truncate content if too long
+    const maxLength = 1024;
+    const oldContent = oldMessage.content?.length > maxLength 
+        ? oldMessage.content.slice(0, maxLength - 3) + '...' 
+        : (oldMessage.content || '*No content*');
+    const newContent = newMessage.content?.length > maxLength 
+        ? newMessage.content.slice(0, maxLength - 3) + '...' 
+        : (newMessage.content || '*No content*');
+    
+    try {
+        await logChannel.send({
+            embeds: [{
+                color: 0x5865F2, // Blurple color like Dyno
+                author: {
+                    name: newMessage.author.tag,
+                    icon_url: newMessage.author.displayAvatarURL({ dynamic: true }),
+                },
+                title: `Message Edited in #${newMessage.channel.name}`,
+                url: newMessage.url,
+                fields: [
+                    {
+                        name: 'Before',
+                        value: oldContent,
+                        inline: false,
+                    },
+                    {
+                        name: 'After',
+                        value: newContent,
+                        inline: false,
+                    },
+                ],
+                footer: {
+                    text: `User ID: ${newMessage.author.id}`,
+                },
+                timestamp: new Date().toISOString(),
+            }],
+        });
+        
+        // Add to audit log
+        addAuditLog(
+            newMessage.guild.id,
+            'MESSAGE_EDIT',
+            newMessage.author.id,
+            null,
+            `Edited message in #${newMessage.channel.name}`
+        );
+    } catch (error) {
+        console.error('[ERROR] Failed to log message edit:', error);
+    }
+});
+
+// Handle message deletes (like Dyno's message delete logging)
+client.on(Events.MessageDelete, async (message) => {
+    // Ignore bots
+    if (message.author?.bot) return;
+    
+    // Ignore DMs
+    if (!message.guild) return;
+    
+    // Check guild access
+    if (!checkGuildAccess(message.guild.id)) return;
+    
+    // Check if message delete logging is enabled
+    const settings = getGuildSettings(message.guild.id);
+    if (!settings?.log_enabled || !settings?.message_delete_log_enabled || !settings?.log_channel_id) return;
+    
+    const logChannel = message.guild.channels.cache.get(settings.log_channel_id);
+    if (!logChannel) return;
+    
+    // Don't log if we don't have the message content (partial/uncached)
+    if (!message.content && !message.attachments?.size) return;
+    
+    // Truncate content if too long
+    const maxLength = 1024;
+    const content = message.content?.length > maxLength 
+        ? message.content.slice(0, maxLength - 3) + '...' 
+        : (message.content || '*No text content*');
+    
+    const fields = [
+        {
+            name: 'Content',
+            value: content,
+            inline: false,
+        },
+    ];
+    
+    // Add attachment info if any
+    if (message.attachments?.size > 0) {
+        const attachmentList = message.attachments.map(a => a.name).join(', ');
+        fields.push({
+            name: 'Attachments',
+            value: attachmentList.slice(0, 1024),
+            inline: false,
+        });
+    }
+    
+    try {
+        await logChannel.send({
+            embeds: [{
+                color: 0xED4245, // Red color for deletes
+                author: {
+                    name: message.author?.tag || 'Unknown User',
+                    icon_url: message.author?.displayAvatarURL({ dynamic: true }),
+                },
+                title: `Message Deleted in #${message.channel.name}`,
+                fields,
+                footer: {
+                    text: `User ID: ${message.author?.id || 'Unknown'}`,
+                },
+                timestamp: new Date().toISOString(),
+            }],
+        });
+        
+        // Add to audit log
+        addAuditLog(
+            message.guild.id,
+            'MESSAGE_DELETE',
+            message.author?.id,
+            null,
+            `Deleted message in #${message.channel.name}`
+        );
+    } catch (error) {
+        console.error('[ERROR] Failed to log message delete:', error);
+    }
+});
+
 // Handle reactions for starboard
 client.on(Events.MessageReactionAdd, async (reaction, user) => {
     if (user.bot) return;

@@ -45,6 +45,28 @@ export default {
                         .setMaxValue(25)
                 )
         )
+        .addSubcommand(subcommand =>
+            subcommand
+                .setName('message-edits')
+                .setDescription('Toggle message edit logging (like Dyno)')
+                .addBooleanOption(option =>
+                    option
+                        .setName('enabled')
+                        .setDescription('Enable or disable message edit logging')
+                        .setRequired(true)
+                )
+        )
+        .addSubcommand(subcommand =>
+            subcommand
+                .setName('message-deletes')
+                .setDescription('Toggle message delete logging (like Dyno)')
+                .addBooleanOption(option =>
+                    option
+                        .setName('enabled')
+                        .setDescription('Enable or disable message delete logging')
+                        .setRequired(true)
+                )
+        )
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
 
     async execute(interaction) {
@@ -141,9 +163,63 @@ export default {
                             value: channel ? channel.toString() : '⚠️ Channel deleted',
                             inline: true,
                         },
+                        {
+                            name: 'Message Edits',
+                            value: settings.message_edit_log_enabled ? '✅ Enabled' : '❌ Disabled',
+                            inline: true,
+                        },
+                        {
+                            name: 'Message Deletes',
+                            value: settings.message_delete_log_enabled ? '✅ Enabled' : '❌ Disabled',
+                            inline: true,
+                        },
                     ],
                 }],
                 flags: MessageFlags.Ephemeral,
+            });
+
+        } else if (subcommand === 'message-edits') {
+            const enabled = interaction.options.getBoolean('enabled');
+            const settings = getGuildSettings(interaction.guildId);
+
+            if (!settings?.log_channel_id) {
+                return interaction.reply({
+                    content: 'Please run `/logs setup` first to configure the log channel.',
+                    flags: MessageFlags.Ephemeral,
+                });
+            }
+
+            updateGuildSetting(interaction.guildId, 'message_edit_log_enabled', enabled ? 1 : 0);
+
+            await interaction.reply({
+                embeds: [{
+                    color: enabled ? 0x57F287 : 0xFEE75C,
+                    description: enabled 
+                        ? '✅ Message edit logging has been **enabled**.\nEdited messages will now be logged to your log channel.'
+                        : '⚠️ Message edit logging has been **disabled**.',
+                }],
+            });
+
+        } else if (subcommand === 'message-deletes') {
+            const enabled = interaction.options.getBoolean('enabled');
+            const settings = getGuildSettings(interaction.guildId);
+
+            if (!settings?.log_channel_id) {
+                return interaction.reply({
+                    content: 'Please run `/logs setup` first to configure the log channel.',
+                    flags: MessageFlags.Ephemeral,
+                });
+            }
+
+            updateGuildSetting(interaction.guildId, 'message_delete_log_enabled', enabled ? 1 : 0);
+
+            await interaction.reply({
+                embeds: [{
+                    color: enabled ? 0x57F287 : 0xFEE75C,
+                    description: enabled 
+                        ? '✅ Message delete logging has been **enabled**.\nDeleted messages will now be logged to your log channel.'
+                        : '⚠️ Message delete logging has been **disabled**.',
+                }],
             });
 
         } else if (subcommand === 'view') {

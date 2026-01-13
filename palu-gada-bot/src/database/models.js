@@ -7,11 +7,11 @@ const statements = {
         INSERT INTO guild_settings (guild_id, prefix, dj_role_id, music_channel_id, log_channel_id, volume,
             welcome_channel_id, welcome_message, welcome_enabled, autorole_id, autorole_enabled,
             log_enabled, starboard_channel_id, starboard_threshold, starboard_enabled,
-            confession_channel_id, confession_enabled)
+            confession_channel_id, confession_enabled, message_edit_log_enabled, message_delete_log_enabled)
         VALUES (@guild_id, @prefix, @dj_role_id, @music_channel_id, @log_channel_id, @volume,
             @welcome_channel_id, @welcome_message, @welcome_enabled, @autorole_id, @autorole_enabled,
             @log_enabled, @starboard_channel_id, @starboard_threshold, @starboard_enabled,
-            @confession_channel_id, @confession_enabled)
+            @confession_channel_id, @confession_enabled, @message_edit_log_enabled, @message_delete_log_enabled)
         ON CONFLICT(guild_id) DO UPDATE SET
             prefix = @prefix,
             dj_role_id = @dj_role_id,
@@ -29,6 +29,8 @@ const statements = {
             starboard_enabled = @starboard_enabled,
             confession_channel_id = @confession_channel_id,
             confession_enabled = @confession_enabled,
+            message_edit_log_enabled = @message_edit_log_enabled,
+            message_delete_log_enabled = @message_delete_log_enabled,
             updated_at = CURRENT_TIMESTAMP
     `),
 
@@ -179,6 +181,8 @@ export function getGuildSettings(guildId) {
         starboard_threshold: 3,
         confession_enabled: false,
         confession_channel_id: null,
+        message_edit_log_enabled: false,
+        message_delete_log_enabled: false,
     };
 }
 
@@ -200,6 +204,8 @@ export function setGuildSettings(settings) {
         starboard_enabled: 0,
         confession_channel_id: null,
         confession_enabled: 0,
+        message_edit_log_enabled: 0,
+        message_delete_log_enabled: 0,
     };
 
     // Merge with defaults

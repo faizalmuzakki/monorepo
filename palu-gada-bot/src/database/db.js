@@ -40,10 +40,28 @@ function initDatabase() {
             starboard_enabled INTEGER DEFAULT 0,
             confession_channel_id TEXT,
             confession_enabled INTEGER DEFAULT 0,
+            message_edit_log_enabled INTEGER DEFAULT 0,
+            message_delete_log_enabled INTEGER DEFAULT 0,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     `);
+
+    // Add message_edit_log_enabled column if it doesn't exist (migration)
+    try {
+        db.exec(`ALTER TABLE guild_settings ADD COLUMN message_edit_log_enabled INTEGER DEFAULT 0`);
+        console.log('[INFO] Added message_edit_log_enabled column');
+    } catch (e) {
+        // Column already exists, ignore
+    }
+
+    // Add message_delete_log_enabled column if it doesn't exist (migration)
+    try {
+        db.exec(`ALTER TABLE guild_settings ADD COLUMN message_delete_log_enabled INTEGER DEFAULT 0`);
+        console.log('[INFO] Added message_delete_log_enabled column');
+    } catch (e) {
+        // Column already exists, ignore
+    }
 
     // Allowed guilds table (for whitelist mode)
     db.exec(`
