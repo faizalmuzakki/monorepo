@@ -5,9 +5,20 @@ import {
     entersState,
     EndBehaviorType,
 } from '@discordjs/voice';
-import { createWriteStream } from 'fs';
-import { pipeline } from 'stream';
 import prism from 'prism-media';
+
+// Try to load sodium (required for voice encryption)
+let sodium;
+try {
+    sodium = await import('sodium-native');
+} catch {
+    try {
+        sodium = await import('libsodium-wrappers');
+        await sodium.ready;
+    } catch (err) {
+        console.error('[ERROR] Failed to load sodium library:', err);
+    }
+}
 
 // Store active monitors per guild
 const activeMonitors = new Map();
@@ -96,6 +107,11 @@ export default {
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
 
         try {
+            // Ensure sodium is ready (if using libsodium-wrappers)
+            if (sodium && sodium.ready) {
+                await sodium.ready;
+            }
+
             // Join voice channel
             const connection = joinVoiceChannel({
                 channelId: voiceChannel.id,
