@@ -5,6 +5,28 @@ The Volume Monitor feature allows you to monitor your own voice volume in Discor
 
 ## Commands
 
+### `/volumemonitor calibrate`
+**NEW!** Find your perfect threshold by testing your volume levels.
+
+**Options:**
+- `duration` (10-120): How long to test in seconds (default: 30)
+
+**What it does:**
+- Measures your speaking volume in real-time
+- Shows average, peak, and minimum levels
+- Recommends personalized thresholds for different scenarios
+- Gives you ready-to-use commands
+
+**Example:**
+```
+/volumemonitor calibrate duration:30
+```
+
+Then speak normally for 30 seconds, and you'll get recommendations like:
+- 🌙 Sensitive: 50% (for late night)
+- 🎮 Normal: 59% (for general use)
+- 🎙️ Relaxed: 70% (for streaming)
+
 ### `/volumemonitor start`
 Start monitoring your voice volume in the current voice channel.
 

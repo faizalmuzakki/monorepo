@@ -2,7 +2,25 @@
 
 ## Quick Start
 
-### 1. Update & Install (One Command)
+### 1. Find Your Perfect Threshold (Recommended)
+```
+/volumemonitor calibrate
+```
+Speak normally for 30 seconds, then use the suggested threshold.
+
+### 2. Start Monitoring
+```
+/volumemonitor start threshold:XX
+```
+Replace XX with your calibrated threshold.
+
+### 3. Or Use Defaults
+```
+/volumemonitor start
+```
+Uses threshold of 70% (may need adjustment for your voice).
+
+---
 ```bash
 cd monorepo/palu-gada-bot
 ./update-bot.sh
@@ -40,6 +58,16 @@ Monitors YOUR voice in Discord and sends reminders when you're too loud.
 ---
 
 ## Commands
+
+### `/volumemonitor calibrate`
+**Find your perfect threshold!**
+
+Measures your voice for 30 seconds and recommends personalized thresholds.
+
+```
+/volumemonitor calibrate
+/volumemonitor calibrate duration:60
+```
 
 ### `/volumemonitor start`
 Start monitoring your voice volume.

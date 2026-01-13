@@ -19,15 +19,25 @@ This will:
 npm start
 ```
 
-## Step 3: Test It in Discord
+## Step 3: Find Your Perfect Threshold
 
 1. **Join a voice channel**
-2. **Run this command:**
+2. **Calibrate your volume:**
    ```
-   /volumemonitor start
+   /volumemonitor calibrate
    ```
-3. **Speak loudly** - you should get a warning!
-4. **Stop monitoring:**
+3. **Speak normally for 30 seconds**
+4. **Copy one of the suggested commands**, for example:
+   ```
+   /volumemonitor start threshold:59
+   ```
+
+## Step 4: Test It
+
+1. **Speak loudly** - you should:
+   - 🔔 Hear a double-beep warning
+   - 📝 See a text message in voice chat
+2. **Stop monitoring:**
    ```
    /volumemonitor stop
    ```
@@ -41,6 +51,14 @@ You now have a working volume monitor that will remind you when you're too loud.
 ---
 
 ## Customize It
+
+### Find Your Perfect Threshold First!
+```
+/volumemonitor calibrate
+```
+This measures YOUR voice and recommends thresholds.
+
+### Or Use These Presets
 
 ### For Late Night Gaming (More Sensitive)
 ```

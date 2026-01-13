@@ -1,4 +1,4 @@
-import { SlashCommandBuilder, MessageFlags, ChannelType } from 'discord.js';
+import { SlashCommandBuilder, MessageFlags } from 'discord.js';
 import {
     joinVoiceChannel,
     VoiceConnectionStatus,
@@ -88,6 +88,19 @@ export default {
         )
         .addSubcommand(subcommand =>
             subcommand
+                .setName('calibrate')
+                .setDescription('Test your volume levels to find the right threshold')
+                .addIntegerOption(option =>
+                    option
+                        .setName('duration')
+                        .setDescription('How long to monitor in seconds (default: 30)')
+                        .setMinValue(10)
+                        .setMaxValue(120)
+                        .setRequired(false)
+                )
+        )
+        .addSubcommand(subcommand =>
+            subcommand
                 .setName('stop')
                 .setDescription('Stop monitoring your voice volume')
         )
@@ -102,6 +115,8 @@ export default {
 
         if (subcommand === 'start') {
             return this.startMonitoring(interaction);
+        } else if (subcommand === 'calibrate') {
+            return this.calibrateVolume(interaction);
         } else if (subcommand === 'stop') {
             return this.stopMonitoring(interaction);
         } else if (subcommand === 'status') {
@@ -363,6 +378,184 @@ export default {
             }],
             flags: MessageFlags.Ephemeral,
         });
+    },
+
+    async calibrateVolume(interaction) {
+        const member = interaction.member;
+        const voiceChannel = member.voice.channel;
+
+        if (!voiceChannel) {
+            return interaction.reply({
+                content: 'You need to be in a voice channel to calibrate!',
+                flags: MessageFlags.Ephemeral,
+            });
+        }
+
+        const duration = (interaction.options.getInteger('duration') || 30) * 1000;
+
+        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+        try {
+            // Ensure sodium is ready
+            if (sodium && sodium.ready) {
+                await sodium.ready;
+            }
+
+            // Join voice channel
+            const connection = joinVoiceChannel({
+                channelId: voiceChannel.id,
+                guildId: voiceChannel.guild.id,
+                adapterCreator: voiceChannel.guild.voiceAdapterCreator,
+                selfDeaf: false,
+                selfMute: true,
+            });
+
+            await entersState(connection, VoiceConnectionStatus.Ready, 30_000);
+
+            const receiver = connection.receiver;
+            const volumeReadings = [];
+            let isCalibrating = true;
+
+            // Initial message
+            const calibrationMsg = await interaction.editReply({
+                embeds: [{
+                    color: 0x5865F2,
+                    title: '🎤 Volume Calibration',
+                    description: `**Speak normally for ${duration / 1000} seconds...**\n\nI'm measuring your volume levels.`,
+                    fields: [
+                        { name: 'Current Volume', value: 'Waiting...', inline: true },
+                        { name: 'Average', value: 'Calculating...', inline: true },
+                        { name: 'Peak', value: 'Calculating...', inline: true },
+                    ],
+                }],
+            });
+
+            // Listen to user's audio
+            receiver.speaking.on('start', (userId) => {
+                if (userId !== interaction.user.id || !isCalibrating) return;
+
+                const audioStream = receiver.subscribe(userId, {
+                    end: {
+                        behavior: EndBehaviorType.AfterSilence,
+                        duration: 100,
+                    },
+                });
+
+                const decoder = new prism.opus.Decoder({
+                    rate: 48000,
+                    channels: 2,
+                    frameSize: 960,
+                });
+
+                audioStream.pipe(decoder);
+
+                decoder.on('data', (chunk) => {
+                    if (!isCalibrating) return;
+
+                    const samples = new Int16Array(chunk.buffer);
+                    let sum = 0;
+                    for (let i = 0; i < samples.length; i++) {
+                        sum += samples[i] * samples[i];
+                    }
+                    const rms = Math.sqrt(sum / samples.length);
+                    const volume = Math.min(100, (rms / 32767) * 100 * 3);
+
+                    if (volume > 5) { // Ignore very quiet noise
+                        volumeReadings.push(volume);
+                    }
+                });
+            });
+
+            // Update display every 2 seconds
+            const updateInterval = setInterval(async () => {
+                if (!isCalibrating || volumeReadings.length === 0) return;
+
+                const current = volumeReadings[volumeReadings.length - 1];
+                const average = volumeReadings.reduce((a, b) => a + b, 0) / volumeReadings.length;
+                const peak = Math.max(...volumeReadings);
+
+                try {
+                    await interaction.editReply({
+                        embeds: [{
+                            color: 0x5865F2,
+                            title: '🎤 Volume Calibration',
+                            description: `**Keep speaking normally...**\n\nMeasuring your volume levels.`,
+                            fields: [
+                                { name: 'Current Volume', value: `${Math.round(current)}%`, inline: true },
+                                { name: 'Average', value: `${Math.round(average)}%`, inline: true },
+                                { name: 'Peak', value: `${Math.round(peak)}%`, inline: true },
+                            ],
+                        }],
+                    });
+                } catch (e) {
+                    // Ignore edit errors
+                }
+            }, 2000);
+
+            // Stop after duration
+            setTimeout(async () => {
+                isCalibrating = false;
+                clearInterval(updateInterval);
+                connection.destroy();
+
+                if (volumeReadings.length === 0) {
+                    return interaction.editReply({
+                        embeds: [{
+                            color: 0xED4245,
+                            title: '❌ Calibration Failed',
+                            description: 'No audio detected. Make sure you\'re speaking!',
+                        }],
+                    });
+                }
+
+                const average = volumeReadings.reduce((a, b) => a + b, 0) / volumeReadings.length;
+                const peak = Math.max(...volumeReadings);
+                const min = Math.min(...volumeReadings);
+
+                // Suggest thresholds
+                const suggestedNormal = Math.round(average * 1.3);
+                const suggestedSensitive = Math.round(average * 1.1);
+                const suggestedRelaxed = Math.round(peak * 0.9);
+
+                await interaction.editReply({
+                    embeds: [{
+                        color: 0x57F287,
+                        title: '✅ Calibration Complete',
+                        description: 'Here are your volume statistics and recommended thresholds:',
+                        fields: [
+                            { name: '📊 Your Volume Stats', value: '\u200b', inline: false },
+                            { name: 'Average Volume', value: `${Math.round(average)}%`, inline: true },
+                            { name: 'Peak Volume', value: `${Math.round(peak)}%`, inline: true },
+                            { name: 'Quietest', value: `${Math.round(min)}%`, inline: true },
+                            { name: '\u200b', value: '\u200b', inline: false },
+                            { name: '🎯 Recommended Thresholds', value: '\u200b', inline: false },
+                            { 
+                                name: '🌙 Sensitive (Late Night)', 
+                                value: `**${suggestedSensitive}%**\nWarns when slightly louder than normal\n\`/volumemonitor start threshold:${suggestedSensitive}\``, 
+                                inline: false 
+                            },
+                            { 
+                                name: '🎮 Normal (General Use)', 
+                                value: `**${suggestedNormal}%**\nWarns when noticeably loud\n\`/volumemonitor start threshold:${suggestedNormal}\``, 
+                                inline: false 
+                            },
+                            { 
+                                name: '🎙️ Relaxed (Streaming)', 
+                                value: `**${suggestedRelaxed}%**\nOnly warns at peak levels\n\`/volumemonitor start threshold:${suggestedRelaxed}\``, 
+                                inline: false 
+                            },
+                        ],
+                        footer: { text: 'Copy and paste one of the commands above to start monitoring!' },
+                    }],
+                });
+            }, duration);
+
+        } catch (error) {
+            console.error('[ERROR] Calibration error:', error);
+            await interaction.editReply({
+                content: `Error during calibration: ${error.message}`,
+            });
+        }
     },
 };
 
