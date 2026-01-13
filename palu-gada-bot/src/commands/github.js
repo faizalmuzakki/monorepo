@@ -1,5 +1,6 @@
 import { SlashCommandBuilder, PermissionFlagsBits, ChannelType, MessageFlags } from 'discord.js';
 import { addGithubWebhook, getGithubWebhooks, deleteGithubWebhook, toggleGithubWebhook, getGithubWebhookById } from '../database/models.js';
+import { logCommandError } from '../utils/errorLogger.js';
 import crypto from 'crypto';
 
 export default {
@@ -138,6 +139,7 @@ export default {
                 });
             } catch (error) {
                 console.error('[ERROR] Failed to add GitHub webhook:', error);
+                await logCommandError(interaction, error, 'github');
                 await interaction.reply({
                     content: 'Failed to add GitHub webhook. Please try again.',
                     flags: MessageFlags.Ephemeral,

@@ -1,5 +1,6 @@
 import { SlashCommandBuilder, PermissionFlagsBits, ChannelType, MessageFlags } from 'discord.js';
 import { addGithubWebhook, getGithubWebhooks } from '../database/models.js';
+import { logCommandError } from '../utils/errorLogger.js';
 import crypto from 'crypto';
 
 export default {
@@ -98,23 +99,37 @@ export default {
 
                 repos = await response.json();
             } else {
-                // Fetch user's repos
-                const response = await fetch('https://api.github.com/user/repos?per_page=100&affiliation=owner', {
-                    headers: {
-                        'Authorization': `Bearer ${token}`,
-                        'Accept': 'application/vnd.github.v3+json',
-                        'User-Agent': 'Discord-Bot',
-                    },
-                });
-
-                if (!response.ok) {
-                    const error = await response.json();
-                    return interaction.editReply({
-                        content: `Failed to fetch your repos: ${error.message || response.statusText}\n\nMake sure your token has \`repo\` and \`admin:repo_hook\` scopes.`,
+                // Fetch user's repos - get all pages
+                let page = 1;
+                let allRepos = [];
+                
+                while (true) {
+                    const response = await fetch(`https://api.github.com/user/repos?per_page=100&page=${page}&type=all`, {
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Accept': 'application/vnd.github.v3+json',
+                            'User-Agent': 'Discord-Bot',
+                        },
                     });
+
+                    if (!response.ok) {
+                        const error = await response.json();
+                        return interaction.editReply({
+                            content: `Failed to fetch your repos: ${error.message || response.statusText}\n\nMake sure your token has \`repo\` and \`admin:repo_hook\` scopes.\n\nToken scopes needed:\n- \`repo\` (Full control of private repositories)\n- \`admin:repo_hook\` (Full control of repository hooks)`,
+                        });
+                    }
+
+                    const pageRepos = await response.json();
+                    if (pageRepos.length === 0) break;
+                    
+                    allRepos = allRepos.concat(pageRepos);
+                    
+                    // If we got less than 100, we're on the last page
+                    if (pageRepos.length < 100) break;
+                    page++;
                 }
 
-                repos = await response.json();
+                repos = allRepos;
             }
 
             if (repos.length === 0) {
@@ -235,6 +250,7 @@ export default {
 
         } catch (error) {
             console.error('[ERROR] Bulk GitHub webhook setup failed:', error);
+            await logCommandError(interaction, error, 'github-bulk');
             await interaction.editReply({
                 content: `Failed to setup webhooks: ${error.message}`,
             });
