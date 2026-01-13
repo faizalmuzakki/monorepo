@@ -288,6 +288,22 @@ function initDatabase() {
         )
     `);
 
+    // GitHub webhooks table
+    db.exec(`
+        CREATE TABLE IF NOT EXISTS github_webhooks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            guild_id TEXT NOT NULL,
+            channel_id TEXT NOT NULL,
+            organization TEXT,
+            repository TEXT,
+            events TEXT DEFAULT '["push","pull_request","issues","release"]',
+            webhook_secret TEXT,
+            enabled INTEGER DEFAULT 1,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    `);
+
     console.log('[INFO] Database initialized');
 }
 

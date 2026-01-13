@@ -162,6 +162,15 @@ const statements = {
     // Audit logs
     addAuditLog: db.prepare('INSERT INTO audit_logs (guild_id, action, user_id, target_id, details) VALUES (?, ?, ?, ?, ?)'),
     getAuditLogs: db.prepare('SELECT * FROM audit_logs WHERE guild_id = ? ORDER BY created_at DESC LIMIT ?'),
+
+    // GitHub webhooks
+    addGithubWebhook: db.prepare('INSERT INTO github_webhooks (guild_id, channel_id, organization, repository, events, webhook_secret) VALUES (?, ?, ?, ?, ?, ?)'),
+    getGithubWebhooks: db.prepare('SELECT * FROM github_webhooks WHERE guild_id = ? AND enabled = 1'),
+    getGithubWebhookById: db.prepare('SELECT * FROM github_webhooks WHERE id = ?'),
+    getAllGithubWebhooks: db.prepare('SELECT * FROM github_webhooks WHERE enabled = 1'),
+    updateGithubWebhook: db.prepare('UPDATE github_webhooks SET channel_id = ?, organization = ?, repository = ?, events = ?, enabled = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'),
+    deleteGithubWebhook: db.prepare('DELETE FROM github_webhooks WHERE id = ? AND guild_id = ?'),
+    toggleGithubWebhook: db.prepare('UPDATE github_webhooks SET enabled = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND guild_id = ?'),
 };
 
 /**
@@ -697,6 +706,48 @@ export function getAuditLogs(guildId, limit = 50) {
     return statements.getAuditLogs.all(guildId, limit);
 }
 
+/**
+ * GitHub Webhooks
+ */
+export function addGithubWebhook(guildId, channelId, organization, repository, events, webhookSecret) {
+    return statements.addGithubWebhook.run(guildId, channelId, organization, repository, JSON.stringify(events), webhookSecret);
+}
+
+export function getGithubWebhooks(guildId) {
+    return statements.getGithubWebhooks.all(guildId).map(w => ({
+        ...w,
+        events: JSON.parse(w.events || '[]'),
+    }));
+}
+
+export function getGithubWebhookById(id) {
+    const webhook = statements.getGithubWebhookById.get(id);
+    if (!webhook) return null;
+    return {
+        ...webhook,
+        events: JSON.parse(webhook.events || '[]'),
+    };
+}
+
+export function getAllGithubWebhooks() {
+    return statements.getAllGithubWebhooks.all().map(w => ({
+        ...w,
+        events: JSON.parse(w.events || '[]'),
+    }));
+}
+
+export function updateGithubWebhook(id, channelId, organization, repository, events, enabled) {
+    return statements.updateGithubWebhook.run(channelId, organization, repository, JSON.stringify(events), enabled ? 1 : 0, id);
+}
+
+export function deleteGithubWebhook(id, guildId) {
+    return statements.deleteGithubWebhook.run(id, guildId);
+}
+
+export function toggleGithubWebhook(id, guildId, enabled) {
+    return statements.toggleGithubWebhook.run(enabled ? 1 : 0, id, guildId);
+}
+
 export default {
     getGuildSettings,
     setGuildSettings,
@@ -778,4 +829,11 @@ export default {
     getConfession,
     addAuditLog,
     getAuditLogs,
+    addGithubWebhook,
+    getGithubWebhooks,
+    getGithubWebhookById,
+    getAllGithubWebhooks,
+    updateGithubWebhook,
+    deleteGithubWebhook,
+    toggleGithubWebhook,
 };

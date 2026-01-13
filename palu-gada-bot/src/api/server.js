@@ -5,8 +5,12 @@ import config from '../config.js';
 import authRoutes from './routes/auth.js';
 import guildsRoutes from './routes/guilds.js';
 import statsRoutes from './routes/stats.js';
+import githubRoutes from './routes/github.js';
 
 const app = express();
+
+// GitHub webhook needs raw body for signature verification
+app.use('/api/github/webhook', express.raw({ type: 'application/json' }));
 
 // Middleware
 app.use(express.json());
@@ -45,6 +49,7 @@ export function requireOwner(req, res, next) {
 app.use('/api/auth', authRoutes);
 app.use('/api/guilds', authenticateToken, guildsRoutes);
 app.use('/api/stats', authenticateToken, statsRoutes);
+app.use('/api/github', githubRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
