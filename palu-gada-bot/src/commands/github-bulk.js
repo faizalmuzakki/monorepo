@@ -48,6 +48,29 @@ export default {
                         .setDescription('GitHub Personal Access Token (with admin:repo_hook scope)')
                         .setRequired(true)
                 )
+                .addStringOption(option =>
+                    option
+                        .setName('filter-org')
+                        .setDescription('Only setup webhooks for repos in this organization (optional)')
+                        .setRequired(false)
+                )
+        )
+        .addSubcommand(subcommand =>
+            subcommand
+                .setName('verify')
+                .setDescription('Check which repos have webhooks configured')
+                .addStringOption(option =>
+                    option
+                        .setName('token')
+                        .setDescription('GitHub Personal Access Token (with admin:repo_hook scope)')
+                        .setRequired(true)
+                )
+                .addStringOption(option =>
+                    option
+                        .setName('organization')
+                        .setDescription('GitHub organization name (optional, checks all your repos if not specified)')
+                        .setRequired(false)
+                )
         )
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
 
@@ -56,6 +79,10 @@ export default {
 
         // Defer reply since this might take a while
         await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+
+        if (subcommand === 'verify') {
+            return this.handleVerify(interaction);
+        }
 
         const channel = interaction.options.getChannel('channel');
         const token = interaction.options.getString('token');
@@ -102,6 +129,7 @@ export default {
                 // Fetch user's repos - get all pages
                 let page = 1;
                 let allRepos = [];
+                const filterOrg = interaction.options.getString('filter-org');
                 
                 while (true) {
                     const response = await fetch(`https://api.github.com/user/repos?per_page=100&page=${page}&type=all`, {
@@ -129,7 +157,13 @@ export default {
                     page++;
                 }
 
-                repos = allRepos;
+                // Filter by organization if specified
+                if (filterOrg) {
+                    repos = allRepos.filter(repo => repo.owner.login === filterOrg);
+                    organization = filterOrg;
+                } else {
+                    repos = allRepos;
+                }
             }
 
             if (repos.length === 0) {
@@ -253,6 +287,153 @@ export default {
             await logCommandError(interaction, error, 'github-bulk');
             await interaction.editReply({
                 content: `Failed to setup webhooks: ${error.message}`,
+            });
+        }
+    },
+
+    async handleVerify(interaction) {
+        const token = interaction.options.getString('token');
+        const organization = interaction.options.getString('organization');
+        const webhookUrl = `${process.env.PUBLIC_URL || 'http://localhost:3000'}/api/github/webhook`;
+
+        try {
+            let repos = [];
+
+            if (organization) {
+                // Fetch organization repos
+                const response = await fetch(`https://api.github.com/orgs/${organization}/repos?per_page=100`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Accept': 'application/vnd.github.v3+json',
+                        'User-Agent': 'Discord-Bot',
+                    },
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    return interaction.editReply({
+                        content: `Failed to fetch organization repos: ${error.message || response.statusText}`,
+                    });
+                }
+
+                repos = await response.json();
+            } else {
+                // Fetch all user repos
+                let page = 1;
+                let allRepos = [];
+                
+                while (true) {
+                    const response = await fetch(`https://api.github.com/user/repos?per_page=100&page=${page}&type=all`, {
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Accept': 'application/vnd.github.v3+json',
+                            'User-Agent': 'Discord-Bot',
+                        },
+                    });
+
+                    if (!response.ok) {
+                        const error = await response.json();
+                        return interaction.editReply({
+                            content: `Failed to fetch your repos: ${error.message || response.statusText}`,
+                        });
+                    }
+
+                    const pageRepos = await response.json();
+                    if (pageRepos.length === 0) break;
+                    
+                    allRepos = allRepos.concat(pageRepos);
+                    
+                    if (pageRepos.length < 100) break;
+                    page++;
+                }
+
+                repos = allRepos;
+            }
+
+            if (repos.length === 0) {
+                return interaction.editReply({
+                    content: 'No repositories found.',
+                });
+            }
+
+            // Check webhooks for each repo
+            const results = {
+                withWebhook: [],
+                withoutWebhook: [],
+                errors: [],
+            };
+
+            for (const repo of repos) {
+                try {
+                    const response = await fetch(`https://api.github.com/repos/${repo.full_name}/hooks`, {
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Accept': 'application/vnd.github.v3+json',
+                            'User-Agent': 'Discord-Bot',
+                        },
+                    });
+
+                    if (response.ok) {
+                        const hooks = await response.json();
+                        const hasOurWebhook = hooks.some(hook => hook.config?.url === webhookUrl);
+                        
+                        if (hasOurWebhook) {
+                            results.withWebhook.push(repo.name);
+                        } else {
+                            results.withoutWebhook.push(repo.name);
+                        }
+                    } else {
+                        const error = await response.json();
+                        results.errors.push(`${repo.name}: ${error.message}`);
+                    }
+                } catch (error) {
+                    results.errors.push(`${repo.name}: ${error.message}`);
+                }
+            }
+
+            // Build response
+            const embed = {
+                color: 0x5865F2,
+                title: '🔍 GitHub Webhook Verification',
+                description: `Checked ${repos.length} repositories${organization ? ` in **${organization}**` : ''}`,
+                fields: [],
+                timestamp: new Date().toISOString(),
+            };
+
+            if (results.withWebhook.length > 0) {
+                const list = results.withWebhook.slice(0, 20).join(', ');
+                const more = results.withWebhook.length > 20 ? `\n...and ${results.withWebhook.length - 20} more` : '';
+                embed.fields.push({
+                    name: `✅ With Webhook (${results.withWebhook.length})`,
+                    value: list + more,
+                    inline: false,
+                });
+            }
+
+            if (results.withoutWebhook.length > 0) {
+                const list = results.withoutWebhook.slice(0, 20).join(', ');
+                const more = results.withoutWebhook.length > 20 ? `\n...and ${results.withoutWebhook.length - 20} more` : '';
+                embed.fields.push({
+                    name: `❌ Without Webhook (${results.withoutWebhook.length})`,
+                    value: list + more,
+                    inline: false,
+                });
+            }
+
+            if (results.errors.length > 0) {
+                embed.fields.push({
+                    name: `⚠️ Errors (${results.errors.length})`,
+                    value: results.errors.slice(0, 3).join('\n').slice(0, 1024),
+                    inline: false,
+                });
+            }
+
+            await interaction.editReply({ embeds: [embed] });
+
+        } catch (error) {
+            console.error('[ERROR] Webhook verification failed:', error);
+            await interaction.editReply({
+                content: `Failed to verify webhooks: ${error.message}`,
             });
         }
     },
