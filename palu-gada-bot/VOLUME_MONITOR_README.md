@@ -26,6 +26,10 @@ In Discord:
 
 Monitors YOUR voice in Discord and sends reminders when you're too loud.
 
+**Reminders include:**
+- 📝 Text message in the voice channel's chat
+- 🔔 Audio beep warning you'll hear in voice
+
 **Perfect for:**
 - 🌙 Late-night gaming (keep quiet)
 - 🎙️ Streaming (consistent volume)
@@ -159,7 +163,9 @@ See: `UPDATE_DEPENDENCIES.md`
 1. Bot joins your voice channel
 2. Listens specifically to YOUR audio stream
 3. Calculates volume using RMS (Root Mean Square)
-4. Sends reminder when volume > threshold
+4. When volume > threshold:
+   - Sends text message in voice channel's chat
+   - Plays double-beep audio warning
 5. Respects cooldown to prevent spam
 
 ### Privacy
@@ -178,8 +184,8 @@ See: `UPDATE_DEPENDENCIES.md`
 
 ### Permissions Needed
 - Connect (join voice channels)
-- Speak (required by Discord)
-- Send Messages (send reminders)
+- Speak (play audio warnings)
+- Send Messages (send text warnings in voice channel chat)
 
 ---
 

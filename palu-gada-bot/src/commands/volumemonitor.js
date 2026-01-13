@@ -1,11 +1,15 @@
-import { SlashCommandBuilder, MessageFlags } from 'discord.js';
+import { SlashCommandBuilder, MessageFlags, ChannelType } from 'discord.js';
 import {
     joinVoiceChannel,
     VoiceConnectionStatus,
     entersState,
     EndBehaviorType,
+    createAudioPlayer,
+    createAudioResource,
+    AudioPlayerStatus,
 } from '@discordjs/voice';
 import prism from 'prism-media';
+import { Readable } from 'stream';
 
 // Try to load sodium (required for voice encryption)
 let sodium;
@@ -18,6 +22,40 @@ try {
     } catch (err) {
         console.error('[ERROR] Failed to load sodium library:', err);
     }
+}
+
+// Simple TTS function - generates a beep tone
+function generateBeepTone(frequency = 800, duration = 0.3) {
+    const sampleRate = 48000;
+    const samples = Math.floor(sampleRate * duration);
+    const buffer = Buffer.alloc(samples * 2); // 16-bit audio
+    
+    for (let i = 0; i < samples; i++) {
+        const t = i / sampleRate;
+        // Create a beep with fade in/out to avoid clicks
+        const envelope = Math.sin((Math.PI * i) / samples);
+        const value = Math.sin(2 * Math.PI * frequency * t) * envelope * 0.3 * 32767;
+        buffer.writeInt16LE(Math.floor(value), i * 2);
+    }
+    
+    return buffer;
+}
+
+// Generate a double beep for warning
+function generateWarningBeep() {
+    const beep1 = generateBeepTone(800, 0.15);
+    const silence = Buffer.alloc(4800); // 0.1s silence at 48kHz
+    const beep2 = generateBeepTone(800, 0.15);
+    
+    return Buffer.concat([beep1, silence, beep2]);
+}
+
+// Create audio stream from buffer
+function createAudioStream(buffer) {
+    const stream = new Readable();
+    stream.push(buffer);
+    stream.push(null);
+    return stream;
 }
 
 // Store active monitors per guild
@@ -132,9 +170,10 @@ export default {
                 threshold,
                 cooldown,
                 lastWarning: 0,
-                textChannel: interaction.channel,
+                textChannel: voiceChannel, // Send to voice channel's text chat
                 voiceChannel,
                 warningCount: 0,
+                audioPlayer: null,
             };
 
             // Listen to the specific user's audio
@@ -181,11 +220,40 @@ export default {
                             monitorData.lastWarning = now;
                             monitorData.warningCount++;
                             
-                            // Send warning
+                            // Send text warning to voice channel's chat
                             monitorData.textChannel.send({
                                 content: `🔊 <@${userId}> Your voice is too loud! Current level: **${Math.round(volume)}%** (Threshold: ${threshold}%)`,
                                 allowedMentions: { users: [userId] },
                             }).catch(console.error);
+                            
+                            // Play audio warning (double beep sound)
+                            try {
+                                if (!monitorData.audioPlayer) {
+                                    monitorData.audioPlayer = createAudioPlayer();
+                                    monitorData.connection.subscribe(monitorData.audioPlayer);
+                                }
+                                
+                                // Only play if not already playing
+                                if (monitorData.audioPlayer.state.status === AudioPlayerStatus.Idle) {
+                                    const beepBuffer = generateWarningBeep();
+                                    const audioStream = createAudioStream(beepBuffer);
+                                    
+                                    const encoder = new prism.opus.Encoder({
+                                        rate: 48000,
+                                        channels: 1,
+                                        frameSize: 960,
+                                    });
+                                    
+                                    const opusStream = audioStream.pipe(encoder);
+                                    const resource = createAudioResource(opusStream, {
+                                        inputType: 'opus',
+                                    });
+                                    
+                                    monitorData.audioPlayer.play(resource);
+                                }
+                            } catch (audioError) {
+                                console.error('[ERROR] Failed to play audio warning:', audioError);
+                            }
                         }
                     }
                 });
@@ -247,6 +315,10 @@ export default {
         // Disconnect and clean up
         if (monitor.connection) {
             monitor.connection.destroy();
+        }
+        
+        if (monitor.audioPlayer) {
+            monitor.audioPlayer.stop();
         }
 
         activeMonitors.delete(monitorKey);

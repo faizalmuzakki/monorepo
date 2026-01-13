@@ -35,7 +35,9 @@ Check the current monitoring status, including:
 1. **Join a voice channel** where you want to monitor your volume
 2. **Run the command** `/volumemonitor start` with your preferred settings
 3. **The bot joins** your voice channel and starts listening to your audio
-4. **When you speak too loudly**, the bot sends a reminder in the text channel
+4. **When you speak too loudly**, the bot:
+   - 🔊 Sends a text message in the voice channel's chat
+   - 🔔 Plays a double-beep audio warning that you'll hear
 5. **Cooldown prevents spam** - you won't get reminded again until the cooldown period passes
 6. **Stop monitoring** anytime with `/volumemonitor stop`
 
@@ -44,14 +46,17 @@ Check the current monitoring status, including:
 - The bot uses Discord's voice receiving API to capture your audio stream
 - Audio is processed in real-time using Opus decoding
 - Volume is calculated using RMS (Root Mean Square) of audio samples
-- The bot is self-muted and only listens (doesn't transmit audio)
+- The bot is self-muted but can play audio warnings
+- Text warnings are sent to the voice channel's text chat
+- Audio warnings are double-beep tones played in the voice channel
 - Each user can have one active monitor per server
 
 ## Requirements
 
 - You must be in a voice channel to start monitoring
 - The bot needs `Connect` and `Speak` permissions in the voice channel
-- The bot needs `Send Messages` permission in the text channel for reminders
+- The bot needs `Send Messages` permission in the voice channel's text chat for text reminders
+- Voice channel must have text chat enabled (default in Discord)
 
 ## Privacy
 
@@ -76,8 +81,10 @@ Check the current monitoring status, including:
 
 **Not receiving warnings:**
 - Try lowering the threshold value (e.g., 50 instead of 70)
-- Check that the bot has `Send Messages` permission in the text channel
+- Check that the bot has `Send Messages` permission in the voice channel's text chat
 - Verify monitoring is active with `/volumemonitor status`
+- Make sure you can hear the audio beep warnings
+- Check your Discord audio output settings
 
 **Too many warnings:**
 - Increase the threshold value (e.g., 80 instead of 70)
