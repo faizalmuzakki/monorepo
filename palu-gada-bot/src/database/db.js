@@ -63,6 +63,22 @@ function initDatabase() {
         // Column already exists, ignore
     }
 
+    // Add level_channel_id column if it doesn't exist (migration)
+    try {
+        db.exec(`ALTER TABLE guild_settings ADD COLUMN level_channel_id TEXT`);
+        console.log('[INFO] Added level_channel_id column');
+    } catch (e) {
+        // Column already exists, ignore
+    }
+
+    // Add level_enabled column if it doesn't exist (migration)
+    try {
+        db.exec(`ALTER TABLE guild_settings ADD COLUMN level_enabled INTEGER DEFAULT 1`);
+        console.log('[INFO] Added level_enabled column');
+    } catch (e) {
+        // Column already exists, ignore
+    }
+
     // Allowed guilds table (for whitelist mode)
     db.exec(`
         CREATE TABLE IF NOT EXISTS allowed_guilds (

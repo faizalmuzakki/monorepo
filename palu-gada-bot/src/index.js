@@ -474,9 +474,23 @@ client.on(Events.MessageCreate, async (message) => {
 
     // Check for level up
     if (result && result.leveledUp) {
+        // Get guild settings to check for level channel
+        const settings = getGuildSettings(message.guild.id);
+        
+        // Determine where to send the level-up message
+        let targetChannel = message.channel; // Default: same channel
+        
+        if (settings?.level_enabled && settings?.level_channel_id) {
+            // Use configured level channel if enabled
+            const levelChannel = message.guild.channels.cache.get(settings.level_channel_id);
+            if (levelChannel) {
+                targetChannel = levelChannel;
+            }
+        }
+        
         // Send level up message
         try {
-            await message.channel.send({
+            await targetChannel.send({
                 content: `🎉 Congratulations ${message.author}! You've reached **Level ${result.newLevel}**!`,
             });
         } catch {
@@ -748,16 +762,28 @@ setInterval(async () => {
                 const xpGained = Math.floor(Math.random() * (voiceXpAmount.max - voiceXpAmount.min + 1)) + voiceXpAmount.min;
                 const result = addXp(guildId, member.user.id, xpGained);
 
-                // Check for level up - notify in a text channel if possible
+                // Check for level up - notify in configured level channel
                 if (result && result.leveledUp) {
-                    // Try to find a general/chat channel to announce
-                    const textChannel = guild.channels.cache.find(
-                        c => c.type === 0 && c.permissionsFor(guild.members.me)?.has('SendMessages')
-                    );
+                    // Get guild settings to check for level channel
+                    const settings = getGuildSettings(guildId);
+                    
+                    let targetChannel = null;
+                    
+                    if (settings?.level_enabled && settings?.level_channel_id) {
+                        // Use configured level channel if enabled
+                        targetChannel = guild.channels.cache.get(settings.level_channel_id);
+                    }
+                    
+                    // Fallback: try to find a general/chat channel
+                    if (!targetChannel) {
+                        targetChannel = guild.channels.cache.find(
+                            c => c.type === 0 && c.permissionsFor(guild.members.me)?.has('SendMessages')
+                        );
+                    }
 
-                    if (textChannel) {
+                    if (targetChannel) {
                         try {
-                            await textChannel.send({
+                            await targetChannel.send({
                                 content: `🎉 ${member.user} leveled up to **Level ${result.newLevel}** while vibing in voice!`,
                             });
                         } catch {
