@@ -39,6 +39,12 @@ export default {
             subcommand
                 .setName('add')
                 .setDescription('Add an emoji-role mapping to a reaction role message')
+                .addChannelOption(option =>
+                    option
+                        .setName('channel')
+                        .setDescription('The channel containing the message')
+                        .setRequired(true)
+                )
                 .addStringOption(option =>
                     option
                         .setName('message_id')
@@ -94,6 +100,9 @@ export default {
         .setDefaultMemberPermissions(PermissionFlagsBits.ManageRoles),
 
     async execute(interaction) {
+        // Defer reply to prevent timeout (Discord has 3-second limit)
+        await interaction.deferReply({});
+
         const subcommand = interaction.options.getSubcommand();
 
         if (subcommand === 'create') {
@@ -103,18 +112,18 @@ export default {
 
             // Check if channel is a text channel
             if (!channel.isTextBased()) {
-                return interaction.reply({
+                return interaction.editReply({
                     content: 'Please select a text channel.',
-                    flags: MessageFlags.Ephemeral,
+
                 });
             }
 
             // Check bot permissions in target channel
             const botMember = interaction.guild.members.me;
             if (!channel.permissionsFor(botMember).has(['SendMessages', 'AddReactions'])) {
-                return interaction.reply({
+                return interaction.editReply({
                     content: 'I need `Send Messages` and `Add Reactions` permissions in that channel.',
-                    flags: MessageFlags.Ephemeral,
+
                 });
             }
 
@@ -128,49 +137,54 @@ export default {
             try {
                 const message = await channel.send({ embeds: [embed] });
 
-                await interaction.reply({
+                await interaction.editReply({
                     embeds: [{
                         color: 0x57F287,
                         title: '✅ Reaction Role Message Created',
                         description: `Message created in ${channel}!\n\n**Message ID:** \`${message.id}\`\n\nUse \`/reactionrole add\` to add emoji-role mappings.`,
                     }],
-                    flags: MessageFlags.Ephemeral,
+
                 });
             } catch (error) {
                 console.error('[ERROR] Failed to create reaction role message:', error);
-                return interaction.reply({
+                return interaction.editReply({
                     content: 'Failed to create the reaction role message. Check my permissions.',
-                    flags: MessageFlags.Ephemeral,
+
                 });
             }
 
         } else if (subcommand === 'add') {
+            const targetChannel = interaction.options.getChannel('channel');
             const messageId = interaction.options.getString('message_id');
             const emojiInput = interaction.options.getString('emoji');
             const role = interaction.options.getRole('role');
 
+            // Check if channel is a text channel
+            if (!targetChannel.isTextBased()) {
+                return interaction.editReply({
+                    content: 'Please select a text channel.',
+                });
+            }
+
             // Check if bot can assign this role
             const botMember = interaction.guild.members.me;
             if (role.position >= botMember.roles.highest.position) {
-                return interaction.reply({
+                return interaction.editReply({
                     content: 'I cannot assign this role because it\'s higher than or equal to my highest role.',
-                    flags: MessageFlags.Ephemeral,
                 });
             }
 
             // Check if role is managed
             if (role.managed) {
-                return interaction.reply({
+                return interaction.editReply({
                     content: 'This role is managed by an integration and cannot be assigned.',
-                    flags: MessageFlags.Ephemeral,
                 });
             }
 
             // Check if it's @everyone
             if (role.id === interaction.guildId) {
-                return interaction.reply({
+                return interaction.editReply({
                     content: 'You cannot use the @everyone role.',
-                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -184,33 +198,20 @@ export default {
                 emojiIdentifier = customEmojiMatch[2]; // Use the ID for custom emojis
             }
 
-            // Try to find the message in any channel
+            // Fetch the message directly from the specified channel
             let targetMessage = null;
-            let targetChannel = null;
-
-            for (const [, channel] of interaction.guild.channels.cache) {
-                if (!channel.isTextBased()) continue;
-                try {
-                    targetMessage = await channel.messages.fetch(messageId);
-                    targetChannel = channel;
-                    break;
-                } catch {
-                    // Message not in this channel
-                }
-            }
-
-            if (!targetMessage) {
-                return interaction.reply({
-                    content: 'Could not find a message with that ID in this server.',
-                    flags: MessageFlags.Ephemeral,
+            try {
+                targetMessage = await targetChannel.messages.fetch(messageId);
+            } catch {
+                return interaction.editReply({
+                    content: `Could not find a message with ID \`${messageId}\` in ${targetChannel}.`,
                 });
             }
 
             // Check if the message is from the bot
             if (targetMessage.author.id !== interaction.client.user.id) {
-                return interaction.reply({
+                return interaction.editReply({
                     content: 'You can only add reaction roles to messages sent by me. Use `/reactionrole create` first.',
-                    flags: MessageFlags.Ephemeral,
                 });
             }
 
@@ -219,9 +220,9 @@ export default {
                 await targetMessage.react(emoji);
             } catch (error) {
                 console.error('[ERROR] Failed to add reaction:', error);
-                return interaction.reply({
+                return interaction.editReply({
                     content: 'Failed to add the reaction. Make sure the emoji is valid and I have permission to add reactions.',
-                    flags: MessageFlags.Ephemeral,
+
                 });
             }
 
@@ -231,13 +232,13 @@ export default {
             // Update the embed to show the new mapping
             await updateReactionRoleEmbed(targetMessage, interaction.guildId);
 
-            await interaction.reply({
+            await interaction.editReply({
                 embeds: [{
                     color: 0x57F287,
                     title: '✅ Reaction Role Added',
                     description: `Users can now react with ${emoji} to get the ${role} role!`,
                 }],
-                flags: MessageFlags.Ephemeral,
+
             });
 
         } else if (subcommand === 'remove') {
@@ -254,9 +255,9 @@ export default {
             // Check if mapping exists
             const existing = getReactionRole(interaction.guildId, messageId, emojiIdentifier);
             if (!existing) {
-                return interaction.reply({
+                return interaction.editReply({
                     content: 'No reaction role found with that emoji on that message.',
-                    flags: MessageFlags.Ephemeral,
+
                 });
             }
 
@@ -284,26 +285,26 @@ export default {
                 console.error('[ERROR] Failed to remove reaction from message:', error);
             }
 
-            await interaction.reply({
+            await interaction.editReply({
                 embeds: [{
                     color: 0x57F287,
                     title: '✅ Reaction Role Removed',
                     description: `Removed the reaction role mapping for ${emojiInput}.`,
                 }],
-                flags: MessageFlags.Ephemeral,
+
             });
 
         } else if (subcommand === 'list') {
             const reactionRoles = getReactionRolesByGuild(interaction.guildId);
 
             if (reactionRoles.length === 0) {
-                return interaction.reply({
+                return interaction.editReply({
                     embeds: [{
                         color: 0x5865F2,
                         title: '📋 Reaction Roles',
                         description: 'No reaction roles set up in this server.\n\nUse `/reactionrole create` to get started!',
                     }],
-                    flags: MessageFlags.Ephemeral,
+
                 });
             }
 
@@ -334,14 +335,14 @@ export default {
                 });
             }
 
-            await interaction.reply({
+            await interaction.editReply({
                 embeds: [{
                     color: 0x5865F2,
                     title: '📋 Reaction Roles',
                     fields: fields.slice(0, 25), // Discord limit
                     footer: { text: `${reactionRoles.length} total mapping(s)` },
                 }],
-                flags: MessageFlags.Ephemeral,
+
             });
 
         } else if (subcommand === 'delete') {
@@ -350,9 +351,9 @@ export default {
             // Check if any mappings exist
             const existing = getReactionRolesByMessage(interaction.guildId, messageId);
             if (existing.length === 0) {
-                return interaction.reply({
+                return interaction.editReply({
                     content: 'No reaction roles found for that message.',
-                    flags: MessageFlags.Ephemeral,
+
                 });
             }
 
@@ -368,13 +369,13 @@ export default {
                 // Message might already be deleted
             }
 
-            await interaction.reply({
+            await interaction.editReply({
                 embeds: [{
                     color: 0x57F287,
                     title: '✅ Reaction Role Setup Deleted',
                     description: `Removed ${existing.length} reaction role mapping(s) and deleted the message.`,
                 }],
-                flags: MessageFlags.Ephemeral,
+
             });
         }
     },
