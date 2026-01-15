@@ -18,7 +18,8 @@ import {
     markReminderCompleted,
     getAfk,
     removeAfk,
-    addAuditLog
+    addAuditLog,
+    getReactionRole,
 } from './database/models.js';
 import { startApiServer, setDiscordClient } from './api/server.js';
 
@@ -476,10 +477,10 @@ client.on(Events.MessageCreate, async (message) => {
     if (result && result.leveledUp) {
         // Get guild settings to check for level channel
         const settings = getGuildSettings(message.guild.id);
-        
+
         // Determine where to send the level-up message
         let targetChannel = message.channel; // Default: same channel
-        
+
         if (settings?.level_enabled && settings?.level_channel_id) {
             // Use configured level channel if enabled
             const levelChannel = message.guild.channels.cache.get(settings.level_channel_id);
@@ -487,7 +488,7 @@ client.on(Events.MessageCreate, async (message) => {
                 targetChannel = levelChannel;
             }
         }
-        
+
         // Send level up message
         try {
             await targetChannel.send({
@@ -503,13 +504,13 @@ client.on(Events.MessageCreate, async (message) => {
 client.on(Events.MessageUpdate, async (oldMessage, newMessage) => {
     // Ignore bots
     if (newMessage.author?.bot) return;
-    
+
     // Ignore DMs
     if (!newMessage.guild) return;
-    
+
     // Check guild access
     if (!checkGuildAccess(newMessage.guild.id)) return;
-    
+
     // Fetch partial messages if needed
     if (oldMessage.partial) {
         try {
@@ -518,7 +519,7 @@ client.on(Events.MessageUpdate, async (oldMessage, newMessage) => {
             return; // Can't fetch old message
         }
     }
-    
+
     if (newMessage.partial) {
         try {
             await newMessage.fetch();
@@ -526,26 +527,26 @@ client.on(Events.MessageUpdate, async (oldMessage, newMessage) => {
             return;
         }
     }
-    
+
     // Ignore if content didn't change (could be embed update, pin, etc.)
     if (oldMessage.content === newMessage.content) return;
-    
+
     // Check if message edit logging is enabled
     const settings = getGuildSettings(newMessage.guild.id);
     if (!settings?.log_enabled || !settings?.message_edit_log_enabled || !settings?.log_channel_id) return;
-    
+
     const logChannel = newMessage.guild.channels.cache.get(settings.log_channel_id);
     if (!logChannel) return;
-    
+
     // Truncate content if too long
     const maxLength = 1024;
-    const oldContent = oldMessage.content?.length > maxLength 
-        ? oldMessage.content.slice(0, maxLength - 3) + '...' 
+    const oldContent = oldMessage.content?.length > maxLength
+        ? oldMessage.content.slice(0, maxLength - 3) + '...'
         : (oldMessage.content || '*No content*');
-    const newContent = newMessage.content?.length > maxLength 
-        ? newMessage.content.slice(0, maxLength - 3) + '...' 
+    const newContent = newMessage.content?.length > maxLength
+        ? newMessage.content.slice(0, maxLength - 3) + '...'
         : (newMessage.content || '*No content*');
-    
+
     try {
         await logChannel.send({
             embeds: [{
@@ -574,7 +575,7 @@ client.on(Events.MessageUpdate, async (oldMessage, newMessage) => {
                 timestamp: new Date().toISOString(),
             }],
         });
-        
+
         // Add to audit log
         addAuditLog(
             newMessage.guild.id,
@@ -592,29 +593,29 @@ client.on(Events.MessageUpdate, async (oldMessage, newMessage) => {
 client.on(Events.MessageDelete, async (message) => {
     // Ignore bots
     if (message.author?.bot) return;
-    
+
     // Ignore DMs
     if (!message.guild) return;
-    
+
     // Check guild access
     if (!checkGuildAccess(message.guild.id)) return;
-    
+
     // Check if message delete logging is enabled
     const settings = getGuildSettings(message.guild.id);
     if (!settings?.log_enabled || !settings?.message_delete_log_enabled || !settings?.log_channel_id) return;
-    
+
     const logChannel = message.guild.channels.cache.get(settings.log_channel_id);
     if (!logChannel) return;
-    
+
     // Don't log if we don't have the message content (partial/uncached)
     if (!message.content && !message.attachments?.size) return;
-    
+
     // Truncate content if too long
     const maxLength = 1024;
-    const content = message.content?.length > maxLength 
-        ? message.content.slice(0, maxLength - 3) + '...' 
+    const content = message.content?.length > maxLength
+        ? message.content.slice(0, maxLength - 3) + '...'
         : (message.content || '*No text content*');
-    
+
     const fields = [
         {
             name: 'Content',
@@ -622,7 +623,7 @@ client.on(Events.MessageDelete, async (message) => {
             inline: false,
         },
     ];
-    
+
     // Add attachment info if any
     if (message.attachments?.size > 0) {
         const attachmentList = message.attachments.map(a => a.name).join(', ');
@@ -632,7 +633,7 @@ client.on(Events.MessageDelete, async (message) => {
             inline: false,
         });
     }
-    
+
     try {
         await logChannel.send({
             embeds: [{
@@ -649,7 +650,7 @@ client.on(Events.MessageDelete, async (message) => {
                 timestamp: new Date().toISOString(),
             }],
         });
-        
+
         // Add to audit log
         addAuditLog(
             message.guild.id,
@@ -732,6 +733,81 @@ client.on(Events.MessageReactionAdd, async (reaction, user) => {
     } catch (error) {
         console.error('[ERROR] Failed to post to starboard:', error);
     }
+
+    // Handle reaction roles
+    await handleReactionRoleAdd(reaction, user);
+});
+
+// Handle reaction role assignments
+async function handleReactionRoleAdd(reaction, user) {
+    if (!reaction.message.guild) return;
+
+    // Get emoji identifier (ID for custom, name for unicode)
+    const emojiIdentifier = reaction.emoji.id || reaction.emoji.name;
+
+    // Check if this is a reaction role
+    const reactionRole = getReactionRole(
+        reaction.message.guild.id,
+        reaction.message.id,
+        emojiIdentifier
+    );
+
+    if (!reactionRole) return;
+
+    // Get the member and add the role
+    try {
+        const member = await reaction.message.guild.members.fetch(user.id);
+        const role = reaction.message.guild.roles.cache.get(reactionRole.role_id);
+
+        if (role && !member.roles.cache.has(role.id)) {
+            await member.roles.add(role);
+            console.log(`[INFO] Added role ${role.name} to ${user.tag} via reaction role`);
+        }
+    } catch (error) {
+        console.error('[ERROR] Failed to add reaction role:', error);
+    }
+}
+
+// Handle reaction removal for reaction roles
+client.on(Events.MessageReactionRemove, async (reaction, user) => {
+    if (user.bot) return;
+
+    // Fetch partial reaction
+    if (reaction.partial) {
+        try {
+            await reaction.fetch();
+        } catch {
+            return;
+        }
+    }
+
+    if (!reaction.message.guild) return;
+    if (!checkGuildAccess(reaction.message.guild.id)) return;
+
+    // Get emoji identifier
+    const emojiIdentifier = reaction.emoji.id || reaction.emoji.name;
+
+    // Check if this is a reaction role
+    const reactionRole = getReactionRole(
+        reaction.message.guild.id,
+        reaction.message.id,
+        emojiIdentifier
+    );
+
+    if (!reactionRole) return;
+
+    // Get the member and remove the role
+    try {
+        const member = await reaction.message.guild.members.fetch(user.id);
+        const role = reaction.message.guild.roles.cache.get(reactionRole.role_id);
+
+        if (role && member.roles.cache.has(role.id)) {
+            await member.roles.remove(role);
+            console.log(`[INFO] Removed role ${role.name} from ${user.tag} via reaction role`);
+        }
+    } catch (error) {
+        console.error('[ERROR] Failed to remove reaction role:', error);
+    }
 });
 
 // Voice channel XP tracking
@@ -766,14 +842,14 @@ setInterval(async () => {
                 if (result && result.leveledUp) {
                     // Get guild settings to check for level channel
                     const settings = getGuildSettings(guildId);
-                    
+
                     let targetChannel = null;
-                    
+
                     if (settings?.level_enabled && settings?.level_channel_id) {
                         // Use configured level channel if enabled
                         targetChannel = guild.channels.cache.get(settings.level_channel_id);
                     }
-                    
+
                     // Fallback: try to find a general/chat channel
                     if (!targetChannel) {
                         targetChannel = guild.channels.cache.find(

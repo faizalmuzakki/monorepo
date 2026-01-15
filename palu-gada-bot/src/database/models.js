@@ -171,6 +171,14 @@ const statements = {
     updateGithubWebhook: db.prepare('UPDATE github_webhooks SET channel_id = ?, organization = ?, repository = ?, events = ?, enabled = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'),
     deleteGithubWebhook: db.prepare('DELETE FROM github_webhooks WHERE id = ? AND guild_id = ?'),
     toggleGithubWebhook: db.prepare('UPDATE github_webhooks SET enabled = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND guild_id = ?'),
+
+    // Reaction roles
+    addReactionRole: db.prepare('INSERT OR REPLACE INTO reaction_roles (guild_id, channel_id, message_id, emoji, role_id) VALUES (?, ?, ?, ?, ?)'),
+    getReactionRole: db.prepare('SELECT * FROM reaction_roles WHERE guild_id = ? AND message_id = ? AND emoji = ?'),
+    getReactionRolesByMessage: db.prepare('SELECT * FROM reaction_roles WHERE guild_id = ? AND message_id = ?'),
+    getReactionRolesByGuild: db.prepare('SELECT * FROM reaction_roles WHERE guild_id = ? ORDER BY created_at DESC'),
+    removeReactionRole: db.prepare('DELETE FROM reaction_roles WHERE guild_id = ? AND message_id = ? AND emoji = ?'),
+    removeReactionRolesByMessage: db.prepare('DELETE FROM reaction_roles WHERE guild_id = ? AND message_id = ?'),
 };
 
 /**
@@ -748,6 +756,33 @@ export function toggleGithubWebhook(id, guildId, enabled) {
     return statements.toggleGithubWebhook.run(enabled ? 1 : 0, id, guildId);
 }
 
+/**
+ * Reaction Roles
+ */
+export function addReactionRole(guildId, channelId, messageId, emoji, roleId) {
+    return statements.addReactionRole.run(guildId, channelId, messageId, emoji, roleId);
+}
+
+export function getReactionRole(guildId, messageId, emoji) {
+    return statements.getReactionRole.get(guildId, messageId, emoji);
+}
+
+export function getReactionRolesByMessage(guildId, messageId) {
+    return statements.getReactionRolesByMessage.all(guildId, messageId);
+}
+
+export function getReactionRolesByGuild(guildId) {
+    return statements.getReactionRolesByGuild.all(guildId);
+}
+
+export function removeReactionRole(guildId, messageId, emoji) {
+    return statements.removeReactionRole.run(guildId, messageId, emoji);
+}
+
+export function removeReactionRolesByMessage(guildId, messageId) {
+    return statements.removeReactionRolesByMessage.run(guildId, messageId);
+}
+
 export default {
     getGuildSettings,
     setGuildSettings,
@@ -836,4 +871,10 @@ export default {
     updateGithubWebhook,
     deleteGithubWebhook,
     toggleGithubWebhook,
+    addReactionRole,
+    getReactionRole,
+    getReactionRolesByMessage,
+    getReactionRolesByGuild,
+    removeReactionRole,
+    removeReactionRolesByMessage,
 };
