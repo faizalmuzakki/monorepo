@@ -1,0 +1,22 @@
+services:
+  2fauth:
+    image: 2fauth/2fauth:latest
+    container_name: 2fauth-local
+    restart: unless-stopped
+    ports:
+      - "8050:8000"
+    environment:
+      - APP_NAME=2FAuth
+      - APP_ENV=local
+      - APP_DEBUG=false
+      - APP_URL=http://localhost:8050
+      - APP_KEY=${APP_KEY}
+      - AUTHENTICATION_GUARD=web-guard
+      - LOG_CHANNEL=daily
+      - LOG_LEVEL=info
+      - CACHE_DRIVER=file
+      - SESSION_DRIVER=file
+    volumes:
+      - ./data:/2fauth
+
+# Access at: http://localhost:8000
