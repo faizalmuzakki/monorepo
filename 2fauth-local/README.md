@@ -65,3 +65,4 @@ docker compose down
 # Remove data (optional - be careful!)
 # rm -rf data/
 ```
+ 
