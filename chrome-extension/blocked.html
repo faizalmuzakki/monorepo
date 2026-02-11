@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Website Blocked</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container {
+      background-color: white;
+      border-radius: 16px;
+      padding: 40px;
+      max-width: 500px;
+      text-align: center;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    }
+
+    .icon {
+      font-size: 64px;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      color: #333;
+      font-size: 32px;
+      margin-bottom: 15px;
+    }
+
+    .blocked-site {
+      color: #f44336;
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 20px;
+      word-break: break-all;
+    }
+
+    p {
+      color: #666;
+      font-size: 16px;
+      line-height: 1.6;
+      margin-bottom: 30px;
+    }
+
+    .buttons {
+      display: flex;
+      gap: 15px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    button {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .close-button {
+      background-color: #f44336;
+      color: white;
+    }
+
+    .close-button:hover {
+      background-color: #da190b;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(244, 67, 54, 0.4);
+    }
+
+    .settings-button {
+      background-color: #4CAF50;
+      color: white;
+    }
+
+    .settings-button:hover {
+      background-color: #45a049;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="icon">🚫</div>
+    <h1>Website Blocked</h1>
+    <div class="blocked-site" id="blockedSite"></div>
+    <p>This website has been blocked by Website Blocker. You've added this site to your blacklist to help you stay focused.</p>
+    <div class="buttons">
+      <button class="close-button" onclick="window.close()">Close Tab</button>
+      <button class="settings-button" onclick="openSettings()">Manage Settings</button>
+    </div>
+  </div>
+
+  <script>
+    // Get the blocked site from URL parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const site = urlParams.get('site');
+    if (site) {
+      document.getElementById('blockedSite').textContent = site;
+    }
+
+    function openSettings() {
+      chrome.runtime.openOptionsPage();
+    }
+  </script>
+</body>
+</html>
